@@ -99,10 +99,12 @@ namespace CadToRevit.Services.PathPreview
 
         // 终点改绿色
         internal static readonly Color EndColor = new Color(0, 190, 90);
+        internal static readonly Color RedZoneColor = new Color(255, 0, 0);
 
         internal const int PathTransparency = 10;
         internal const int ArrowTransparency = 10;
         internal const int NodeTransparency = 10;
         internal const int LabelTransparency = 0;
+        internal const int RedZoneTransparency = 0;
     }
 }

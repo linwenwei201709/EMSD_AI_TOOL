@@ -15,6 +15,7 @@ namespace CadToRevit.Services.PathPreview
             public int ArrowCount { get; set; }
             public int NodeCount { get; set; }
             public int PointMarkerCount { get; set; }
+            public int RedZoneCount { get; set; }
             public List<ElementId> ElementIds { get; } = new List<ElementId>();
         }
 
@@ -129,6 +130,99 @@ namespace CadToRevit.Services.PathPreview
                 ", NodeCount=" + result.NodeCount +
                 ", PointMarkerCount=" + result.PointMarkerCount);
             return result;
+        }
+
+        internal static DrawResult DrawRedZones(
+            Document doc,
+            View3D view3D,
+            IList<RedZonePoint3D> redZones)
+        {
+            DrawResult result = new DrawResult();
+            if (doc == null || view3D == null || redZones == null || redZones.Count == 0)
+            {
+                return result;
+            }
+
+            try
+            {
+                ElementId genericModelCategory = new ElementId(BuiltInCategory.OST_GenericModel);
+                if (view3D.CanCategoryBeHidden(genericModelCategory))
+                {
+                    view3D.SetCategoryHidden(genericModelCategory, false);
+                }
+            }
+            catch
+            {
+                // A view template can make category visibility read-only; the
+                // DirectShape is still useful in the active view.
+            }
+
+            ElementId materialId = PathPreviewMaterialService.GetOrCreateRedZoneMaterialId(doc);
+            List<GeometryObject> geometry = new List<GeometryObject>();
+            int chunkIndex = 0;
+            for (int i = 0; i < redZones.Count; i++)
+            {
+                Solid solid = BuildRedZoneSolid(redZones[i], materialId);
+                if (solid == null || solid.Faces == null || solid.Faces.Size == 0)
+                {
+                    continue;
+                }
+
+                geometry.Add(solid);
+                result.RedZoneCount++;
+                if (geometry.Count >= 200 || i == redZones.Count - 1)
+                {
+                    DirectShape shape = DirectShape.CreateElement(
+                        doc,
+                        new ElementId(BuiltInCategory.OST_GenericModel));
+                    string name = "RED_ZONE_CHUNK_" + chunkIndex;
+                    PathPreviewMetadataService.ApplyMetadata(
+                        shape,
+                        PathPreviewMetadataService.BuildNodeName("FAILED_PATH", name),
+                        PathPreviewMetadataService.BuildNodeDataId("FAILED_PATH", name));
+                    shape.SetShape(geometry);
+                    ApplyOverride(view3D, shape.Id, PathPreviewConstants.RedZoneColor, PathPreviewConstants.RedZoneTransparency);
+                    result.ElementIds.Add(shape.Id);
+                    geometry = new List<GeometryObject>();
+                    chunkIndex++;
+                }
+            }
+
+            DiagnosticRecorder.AppendDebug(
+                "[PathPreview] Red zones drawn=" + result.RedZoneCount + ", shapes=" + chunkIndex);
+            return result;
+        }
+
+        private static Solid BuildRedZoneSolid(RedZonePoint3D redZone, ElementId materialId)
+        {
+            if (redZone == null ||
+                double.IsNaN(redZone.X) || double.IsNaN(redZone.Y) ||
+                double.IsInfinity(redZone.X) || double.IsInfinity(redZone.Y))
+            {
+                return null;
+            }
+
+            const double mmToFeet = 1.0 / 304.8;
+            double cellSizeMm = redZone.CellSizeMm > 0 ? redZone.CellSizeMm : 100.0;
+            double half = cellSizeMm * 0.5 * mmToFeet;
+            double height = 500.0 * mmToFeet;
+            double baseZ = (redZone.Z + 900.0) * mmToFeet;
+            double centerX = redZone.X * mmToFeet;
+            double centerY = redZone.Y * mmToFeet;
+            XYZ p0 = new XYZ(centerX - half, centerY - half, baseZ);
+            XYZ p1 = new XYZ(centerX + half, centerY - half, baseZ);
+            XYZ p2 = new XYZ(centerX + half, centerY + half, baseZ);
+            XYZ p3 = new XYZ(centerX - half, centerY + half, baseZ);
+            CurveLoop loop = new CurveLoop();
+            loop.Append(Line.CreateBound(p0, p1));
+            loop.Append(Line.CreateBound(p1, p2));
+            loop.Append(Line.CreateBound(p2, p3));
+            loop.Append(Line.CreateBound(p3, p0));
+            return GeometryCreationUtilities.CreateExtrusionGeometry(
+                new List<CurveLoop> { loop },
+                XYZ.BasisZ,
+                height,
+                new SolidOptions(materialId, ElementId.InvalidElementId));
         }
 
         internal static DrawResult DrawMany(Document doc, View3D view3D, IList<PathPolyline> paths, bool drawNodeLabels)

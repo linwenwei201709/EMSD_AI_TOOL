@@ -2,7 +2,7 @@
 <RevitAddIns>
   <AddIn Type="Application">
     <Name>CadToRevit</Name>
-    <Assembly>D:\EMSDRevitPlugs\Solution\CadToRevit\CadToRevit\bin\Debug\CadToRevit.dll</Assembly>
+    <Assembly>D:\Program Files\EMSD_AI_Tool_Revit2024\CadToRevit.dll</Assembly>
     <AddInId>9D6B1A41-2546-4F73-98A4-2E0A0C6D1D91</AddInId>
     <FullClassName>CadToRevit.App</FullClassName>
     <VendorId>EMSD</VendorId>

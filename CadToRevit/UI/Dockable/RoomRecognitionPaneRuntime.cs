@@ -10,6 +10,7 @@ using CadToRevit.Models.Rooms.LayoutPlans;
 using CadToRevit.Models.Rooms;
 using CadToRevit.Models.Rooms.Semantic;
 using CadToRevit.Services.Diagnostics;
+using CadToRevit.Services.Api;
 using CadToRevit.Services.Part3;
 using CadToRevit.Services.PathObstacles;
 using CadToRevit.Services.PathPreview;
@@ -4576,11 +4577,13 @@ namespace CadToRevit.UI.Dockable
             }
 
             RoomSemanticRecord room = null;
+            ElementId roomLevelId = ElementId.InvalidElementId;
             lock (SyncRoot)
             {
                 if (_state != null)
                 {
                     _state.RoomByKey.TryGetValue(roomKey ?? string.Empty, out room);
+                    roomLevelId = ResolveRoomLevelId(_state, roomKey);
                 }
             }
 
@@ -4601,6 +4604,28 @@ namespace CadToRevit.UI.Dockable
             {
                 return CreateAhuPlacementValidationPreparationFailure(
                     "The selected room placement point could not be resolved.");
+            }
+
+            // Reuse the existing door-metric candidate resolver so the room-fit
+            // request can align the AHU with a rotated room door. If no usable
+            // candidate is found, the backend keeps its legacy side fallback.
+            double[] doorDirection = null;
+            try
+            {
+                DoorMetricCandidate doorCandidate = ResolveRoomDoorMetricCandidate(
+                    doc,
+                    room,
+                    roomLevelId);
+                XYZ direction = doorCandidate != null ? doorCandidate.Direction : null;
+                if (direction != null && IsUsableXyDirection(direction))
+                {
+                    doorDirection = new[] { direction.X, direction.Y };
+                }
+            }
+            catch (Exception ex)
+            {
+                DiagnosticRecorder.AppendDebug(
+                    "[AhuRoomFit] Door direction resolution skipped. Error=" + ex.Message);
             }
 
             RoutePlannerInitResult initResult = RoutePlannerAutoInitService.EnsureInitialized(doc, uiDoc);
@@ -4624,8 +4649,8 @@ namespace CadToRevit.UI.Dockable
             DiagnosticRecorder.AppendDebug(
                 "[AhuPlacementPointMarker] Draw disabled. Placement point is API-only.");
 
-            double xMm = placementPoint.X * 304.8;
-            double yMm = placementPoint.Y * 304.8;
+            double xMm = IfcMillimeterCoordinateAdapter.FeetToMillimeters(placementPoint.X);
+            double yMm = IfcMillimeterCoordinateAdapter.FeetToMillimeters(placementPoint.Y);
 
             DiagnosticRecorder.AppendDebug(
                 "[AhuRoomFit] prepared roomKey=" + (roomKey ?? string.Empty) +
@@ -4645,7 +4670,9 @@ namespace CadToRevit.UI.Dockable
                 SessionId = initResult.SessionId,
                 RoomKey = roomKey ?? string.Empty,
                 PlacementXmm = xMm,
-                PlacementYmm = yMm
+                PlacementYmm = yMm,
+                DoorDirection = doorDirection,
+                RestrictedAreas = BuildDeliveryRouteRestrictedAreas(doc)
             };
         }
 
@@ -8427,6 +8454,7 @@ namespace CadToRevit.UI.Dockable
                 HeightMm = heightMm,
                 Priority = priority,
                 ElementId = element.Id,
+                Direction = ResolveWallDirection(hostWall),
                 WidthSource = widthSource,
                 HeightSource = heightSource
             };
@@ -8548,6 +8576,16 @@ namespace CadToRevit.UI.Dockable
             XYZ direction = line.Direction;
             double length = Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y);
             return length > 1.0e-9 ? new XYZ(direction.X / length, direction.Y / length, 0.0) : null;
+        }
+
+        private static bool IsUsableXyDirection(XYZ value)
+        {
+            return value != null &&
+                !double.IsNaN(value.X) &&
+                !double.IsNaN(value.Y) &&
+                !double.IsInfinity(value.X) &&
+                !double.IsInfinity(value.Y) &&
+                Math.Sqrt(value.X * value.X + value.Y * value.Y) > 1.0e-9;
         }
 
         private static bool IsDoorMetricElement(Element element)
@@ -9039,6 +9077,8 @@ namespace CadToRevit.UI.Dockable
         private sealed class DoorMetricCandidate
         {
             public XYZ Center { get; set; }
+
+            public XYZ Direction { get; set; }
 
             public double WidthMm { get; set; }
 

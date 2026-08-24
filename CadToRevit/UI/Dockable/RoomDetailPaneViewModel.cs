@@ -1962,9 +1962,24 @@ namespace CadToRevit.UI.Dockable
                 //     preparation.GoalYmm);
                 // string responseBody = await Task.Run(() => CalculatePathApiService.PostCalculatePath(requestJson));
 
+                int routeModelId = ParseAhuFamilyKeyNumber(
+                    CurrentEditor != null ? CurrentEditor.SelectedEquipmentFamilyKey : string.Empty);
+                if (routeModelId <= 0 && SelectedEquipmentOption != null)
+                {
+                    routeModelId = ParseAhuFamilyKeyNumber(SelectedEquipmentOption.FamilyKey);
+                }
+                if (routeModelId <= 0)
+                {
+                    const string modelIdMessage =
+                        "The confirmed AHU model could not be resolved for route planning.";
+                    LocalizedDialogService.Error(null, modelIdMessage);
+                    DeliveryRouteHintText = modelIdMessage;
+                    return;
+                }
+
                 string requestJson = CalculatePathApiService.BuildCutAndReplanRequestJson(
                     preparation.SessionId,
-                    1,
+                    routeModelId,
                     preparation.StartXmm,
                     preparation.StartYmm,
                     preparation.GoalXmm,
@@ -3236,11 +3251,22 @@ namespace CadToRevit.UI.Dockable
                 // through to placement. The placement service intentionally bypasses
                 // the legacy Service Side / RoomLong / RoomShort orientation logic
                 // whenever this API angle is available.
+                double insertXmm = validationResult != null &&
+                    !double.IsNaN(validationResult.PlacementPointXmm) &&
+                    !double.IsInfinity(validationResult.PlacementPointXmm)
+                    ? validationResult.PlacementPointXmm
+                    : preparation.PlacementXmm;
+                double insertYmm = validationResult != null &&
+                    !double.IsNaN(validationResult.PlacementPointYmm) &&
+                    !double.IsInfinity(validationResult.PlacementPointYmm)
+                    ? validationResult.PlacementPointYmm
+                    : preparation.PlacementYmm;
+
                 await RoomRecognitionPaneRuntime.RequestSetRoomCustomFamilyAsync(
                     targetRoomKey,
                     familyKey,
-                    preparation.PlacementXmm,
-                    preparation.PlacementYmm,
+                    insertXmm,
+                    insertYmm,
                     validationResult != null ? validationResult.OrientationDeg : null);
 
                 if (statusVersion == _equipmentInsertStatusVersion)
@@ -3299,9 +3325,16 @@ namespace CadToRevit.UI.Dockable
                 PlacementPointXmm = placementXmm,
                 PlacementPointYmm = placementYmm,
                 Orientation = null,
-                UseMaintenanceSpace = true,
+                EvaluationMode = "find_feasible_placement",
+                UseMaintenanceSpace = false,
+                EvaluateMaintenanceSpace = true,
                 DoorFacingSide = RoomCustomFamilyCatalogService.GetDoorFacingSide(familyKey),
+                DoorFacingSideOptions = new List<string> { "bottom", "top", "left", "right" },
                 WallFacingSides = RoomCustomFamilyCatalogService.GetWallFacingSides(familyKey).ToList(),
+                DoorDirection = preparation != null ? preparation.DoorDirection : null,
+                RestrictedAreas = preparation != null && preparation.RestrictedAreas != null
+                    ? preparation.RestrictedAreas
+                    : new List<RestrictedAreaRequestItem>(),
                 MaintenanceSpaces = maintenanceSpaces,
                 SubModules = BuildAhuPlacementSubModuleFootprints(familyKey)
             };
@@ -3371,6 +3404,36 @@ namespace CadToRevit.UI.Dockable
 
         private static List<AhuPlacementSubModuleRequest> BuildAhuPlacementSubModuleFootprints(string familyKey)
         {
+            // Prefer the backend workbook/catalog layout when available. This
+            // keeps the colleague UI and persisted family catalog intact while
+            // using the same six-module polygon coordinates as the current API.
+            int modelId = ParseAhuFamilyKeyNumber(familyKey);
+            IReadOnlyList<AhuEquipmentLayoutCatalogService.LayoutModule> apiLayout =
+                AhuEquipmentLayoutCatalogService.TryGetLayout(modelId);
+            if (apiLayout != null && apiLayout.Count > 0)
+            {
+                List<AhuPlacementSubModuleRequest> apiResult = apiLayout
+                    .Where(x => x != null && x.Points != null && x.Points.Count >= 4)
+                    .Select(x => new AhuPlacementSubModuleRequest
+                    {
+                        Module = x.Key,
+                        Name = x.Name ?? string.Empty,
+                        Points = x.Points
+                            .Where(point => point != null && point.Length >= 2)
+                            .Select(point => new AhuPlacementPoint2D(point[0], point[1]))
+                            .ToList()
+                    })
+                    .Where(x => x.Points.Count >= 4)
+                    .ToList();
+                if (apiResult.Count > 0)
+                {
+                    DiagnosticRecorder.AppendDebug(
+                        "[AhuRoomFitApi] subModules source=backend_catalog, familyKey=" +
+                        (familyKey ?? string.Empty) + ", count=" + apiResult.Count);
+                    return apiResult;
+                }
+            }
+
             IReadOnlyList<RoomCustomFamilySubModuleDto> configured =
                 RoomCustomFamilyCatalogService.GetSubModules(familyKey);
 

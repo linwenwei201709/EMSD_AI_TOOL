@@ -79,15 +79,41 @@ namespace CadToRevit.Services.Rooms.EquipmentValidation
             // "Placement point is not inside the selected room."  Treat that as an
             // Oversized/non-fit result, show the returned reason/message, and keep
             // going with Revit insertion so the point/equipment can be inspected.
-            List<string> reasons = BuildReasons(responseDto);
+            bool? physicalFitValue = responseDto.PhysicalFit ?? responseDto.Fit;
+            bool physicalFit = physicalFitValue == true;
+            bool apiSuccess = responseDto.Success || physicalFitValue.HasValue;
+            bool repositioned = responseDto.Repositioned == true ||
+                (responseDto.CurrentPlacementFit == false && responseDto.FeasiblePlacementFound == true);
+            double placementXmm = request.PlacementPointXmm;
+            double placementYmm = request.PlacementPointYmm;
+            if (responseDto.PlacementPointMm != null && responseDto.PlacementPointMm.Length >= 2 &&
+                IsFinite(responseDto.PlacementPointMm[0]) && IsFinite(responseDto.PlacementPointMm[1]))
+            {
+                placementXmm = responseDto.PlacementPointMm[0];
+                placementYmm = responseDto.PlacementPointMm[1];
+            }
+
+            List<string> reasons = BuildReasons(responseDto, physicalFit);
+            string status = !apiSuccess || !physicalFitValue.HasValue
+                ? AhuPlacementValidationStatuses.ApiError
+                : physicalFit
+                    ? (responseDto.MaintenanceFit == false
+                        ? AhuPlacementValidationStatuses.MaintenanceClearanceInsufficient
+                        : (repositioned ? AhuPlacementValidationStatuses.ValidAfterRepositioning : AhuPlacementValidationStatuses.Valid))
+                    : (responseDto.FeasiblePlacementFound == false ||
+                       string.Equals(responseDto.ViolationType, "NoFeasiblePlacement", StringComparison.OrdinalIgnoreCase)
+                        ? AhuPlacementValidationStatuses.NoFeasiblePlacement
+                        : AhuPlacementValidationStatuses.CurrentPlacementInvalid);
 
             DiagnosticRecorder.AppendDebug(
                 "[AhuRoomFitApi] apiSuccess=" + responseDto.Success +
-                ", fit=" + responseDto.Fit +
+                ", fit=" + physicalFit +
+                ", maintenanceFit=" + (responseDto.MaintenanceFit.HasValue ? responseDto.MaintenanceFit.Value.ToString() : "(null)") +
+                ", repositioned=" + repositioned +
                 ", modelId=" + request.FamilyId.ToString(CultureInfo.InvariantCulture) +
                 ", placementPointMm=[" +
-                request.PlacementPointXmm.ToString("0.###", CultureInfo.InvariantCulture) + "," +
-                request.PlacementPointYmm.ToString("0.###", CultureInfo.InvariantCulture) +
+                placementXmm.ToString("0.###", CultureInfo.InvariantCulture) + "," +
+                placementYmm.ToString("0.###", CultureInfo.InvariantCulture) +
                 "], orientationDeg=" +
                 (responseDto.OrientationDeg.HasValue
                     ? responseDto.OrientationDeg.Value.ToString("0.###", CultureInfo.InvariantCulture)
@@ -96,14 +122,22 @@ namespace CadToRevit.Services.Rooms.EquipmentValidation
             return new AhuPlacementValidationResult
             {
                 HasResult = true,
-                IsValid = responseDto.Fit,
-                Status = responseDto.Fit ? "Valid" : "Oversized",
+                IsValid = physicalFit,
+                Status = status,
                 Reasons = reasons,
                 Source = "API",
                 RawResponse = responseText ?? string.Empty,
                 OrientationDeg = responseDto.OrientationDeg,
-                PlacementPointXmm = request.PlacementPointXmm,
-                PlacementPointYmm = request.PlacementPointYmm
+                PlacementPointXmm = placementXmm,
+                PlacementPointYmm = placementYmm,
+                PhysicalFit = physicalFit,
+                MaintenanceFit = responseDto.MaintenanceFit,
+                MaintenanceReason = responseDto.MaintenanceReason,
+                CurrentPlacementFit = responseDto.CurrentPlacementFit,
+                FeasiblePlacementFound = responseDto.FeasiblePlacementFound,
+                Repositioned = repositioned,
+                CanInsert = apiSuccess && physicalFitValue.HasValue,
+                ViolationType = responseDto.ViolationType
             };
         }
 
@@ -113,6 +147,14 @@ namespace CadToRevit.Services.Rooms.EquipmentValidation
             sb.Append("{");
             sb.Append("\"session_id\":\"").Append(EscapeJson(request.SessionId)).Append("\",");
             sb.Append("\"model_id\":").Append(request.FamilyId.ToString(CultureInfo.InvariantCulture)).Append(",");
+            sb.Append("\"evaluation_mode\":\"")
+                .Append(EscapeJson(string.IsNullOrWhiteSpace(request.EvaluationMode)
+                    ? "find_feasible_placement"
+                    : request.EvaluationMode.Trim()))
+                .Append("\",");
+            sb.Append("\"room_height_mm\":")
+                .Append(request.RoomHeightMm.ToString("0.###", CultureInfo.InvariantCulture))
+                .Append(",");
             sb.Append("\"orientation\":");
             if (request.Orientation.HasValue)
             {
@@ -138,6 +180,11 @@ namespace CadToRevit.Services.Rooms.EquipmentValidation
             sb.Append(",\"use_maintenance_space\":")
                 .Append(request.UseMaintenanceSpace ? "true" : "false");
 
+            sb.Append(",\"evaluate_maintenance_space\":")
+                .Append(request.EvaluateMaintenanceSpace ? "true" : "false");
+
+            AppendNumberArrayJson(sb, "door_direction", request.DoorDirection);
+
             if (!string.IsNullOrWhiteSpace(request.DoorFacingSide))
             {
                 sb.Append(",\"door_facing_side\":\"")
@@ -146,11 +193,75 @@ namespace CadToRevit.Services.Rooms.EquipmentValidation
             }
 
             AppendWallFacingSidesJson(sb, request.WallFacingSides);
+            AppendStringArrayJson(sb, "door_facing_side_options", request.DoorFacingSideOptions);
             AppendMaintenanceSpacesJson(sb, request.MaintenanceSpaces);
             AppendSubModulesJson(sb, request.SubModules);
+            AppendRestrictedAreasJson(sb, request.RestrictedAreas);
 
             sb.Append("}");
             return sb.ToString();
+        }
+
+        private static void AppendNumberArrayJson(StringBuilder sb, string name, double[] values)
+        {
+            if (sb == null || string.IsNullOrWhiteSpace(name) || values == null || values.Length == 0)
+            {
+                return;
+            }
+
+            sb.Append(",\"").Append(name).Append("\":[");
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (i > 0) sb.Append(",");
+                sb.Append(values[i].ToString("0.########", CultureInfo.InvariantCulture));
+            }
+            sb.Append("]");
+        }
+
+        private static void AppendStringArrayJson(StringBuilder sb, string name, IReadOnlyList<string> values)
+        {
+            if (sb == null || string.IsNullOrWhiteSpace(name) || values == null || values.Count == 0)
+            {
+                return;
+            }
+
+            sb.Append(",\"").Append(name).Append("\":[");
+            bool first = true;
+            foreach (string value in values)
+            {
+                if (string.IsNullOrWhiteSpace(value)) continue;
+                if (!first) sb.Append(",");
+                first = false;
+                sb.Append("\"").Append(EscapeJson(value.Trim().ToLowerInvariant())).Append("\"");
+            }
+            sb.Append("]");
+        }
+
+        private static void AppendRestrictedAreasJson(
+            StringBuilder sb,
+            IReadOnlyList<CadToRevit.Services.PathPreview.RestrictedAreaRequestItem> areas)
+        {
+            if (sb == null || areas == null || areas.Count == 0)
+            {
+                return;
+            }
+
+            sb.Append(",\"restricted_areas\":[");
+            bool first = true;
+            foreach (CadToRevit.Services.PathPreview.RestrictedAreaRequestItem area in areas)
+            {
+                if (area == null || area.Bounds == null || area.Bounds.Length < 4) continue;
+                if (!first) sb.Append(",");
+                first = false;
+                sb.Append("{\"name\":\"").Append(EscapeJson(area.Name ?? string.Empty)).Append("\",\"bounds\":[");
+                for (int i = 0; i < 4; i++)
+                {
+                    if (i > 0) sb.Append(",");
+                    sb.Append(area.Bounds[i].ToString("0.###", CultureInfo.InvariantCulture));
+                }
+                sb.Append("]}");
+            }
+            sb.Append("]");
         }
 
         private static void AppendWallFacingSidesJson(
@@ -303,10 +414,24 @@ namespace CadToRevit.Services.Rooms.EquipmentValidation
             }
         }
 
-        private static List<string> BuildReasons(RoomFitResponseDto response)
+        private static List<string> BuildReasons(RoomFitResponseDto response, bool physicalFit)
         {
             List<string> reasons = new List<string>();
-            if (response == null || response.Fit)
+            if (response == null)
+            {
+                return reasons;
+            }
+
+            if (physicalFit && response.MaintenanceFit == false)
+            {
+                string maintenanceReason = NormalizeMessage(response.MaintenanceReason);
+                reasons.Add(string.IsNullOrWhiteSpace(maintenanceReason)
+                    ? "Maintenance clearance is insufficient."
+                    : maintenanceReason);
+                return reasons;
+            }
+
+            if (physicalFit)
             {
                 return reasons;
             }
@@ -375,6 +500,11 @@ namespace CadToRevit.Services.Rooms.EquipmentValidation
                 " mm");
         }
 
+        private static bool IsFinite(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value);
+        }
+
         private static string EscapeJson(string value)
         {
             return (value ?? string.Empty)
@@ -392,7 +522,31 @@ namespace CadToRevit.Services.Rooms.EquipmentValidation
             public bool Success { get; set; }
 
             [DataMember(Name = "fit")]
-            public bool Fit { get; set; }
+            public bool? Fit { get; set; }
+
+            [DataMember(Name = "physical_fit")]
+            public bool? PhysicalFit { get; set; }
+
+            [DataMember(Name = "maintenance_fit")]
+            public bool? MaintenanceFit { get; set; }
+
+            [DataMember(Name = "maintenance_reason")]
+            public string MaintenanceReason { get; set; }
+
+            [DataMember(Name = "current_placement_fit")]
+            public bool? CurrentPlacementFit { get; set; }
+
+            [DataMember(Name = "feasible_placement_found")]
+            public bool? FeasiblePlacementFound { get; set; }
+
+            [DataMember(Name = "repositioned")]
+            public bool? Repositioned { get; set; }
+
+            [DataMember(Name = "placement_point_mm")]
+            public double[] PlacementPointMm { get; set; }
+
+            [DataMember(Name = "violation_type")]
+            public string ViolationType { get; set; }
 
             [DataMember(Name = "room_area_m2")]
             public double? RoomAreaM2 { get; set; }

@@ -1,11 +1,14 @@
 ﻿using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using CadToRevit.Models.Path;
+using CadToRevit.Services.Api;
 using CadToRevit.Services.Diagnostics;
+using CadToRevit.Services.Rooms.EquipmentValidation;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
@@ -25,6 +28,18 @@ namespace CadToRevit.Services.PathPreview
         public string ResponseBody { get; set; }
 
         public double? PathLengthMeters { get; set; }
+
+        // Additive response metadata. Existing callers can ignore these fields;
+        // newer UI code can report why a route failed without parsing JSON again.
+        public string FailureType { get; set; }
+
+        public int RedZoneCount { get; set; }
+
+        public int AppliedRestrictionCount { get; set; }
+
+        public bool NeedCut { get; set; }
+
+        public string Strategy { get; set; }
     }
 
 
@@ -104,10 +119,113 @@ namespace CadToRevit.Services.PathPreview
                    "]," +
                    "\"start_orientation\":0," +
                    "\"goal_orientation\":0," +
+                   "\"restricted_areas\":" + BuildRestrictedAreaJson(restrictedAreas) + "," +
                    "\"restricted_area\":" + BuildRestrictedAreaJson(restrictedAreas) + "," +
-                   "\"handling_clearance_mm\":0," +
-                   "\"handling_tool_type\":\"pallet_jack\"" +
+                   "\"handling_clearance_mm\":300," +
+                   "\"safety_margin_mm\":300," +
+                   "\"apply_clearance_envelope\":false," +
+                   "\"auto_adjust_goal\":false," +
+                   "\"allow_disassembly\":true," +
+                   "\"handling_tool_type\":\"pallet_jack\"," +
+                   "\"sub_modules\":" + BuildRouteLayoutModulesJson(originalModelId) +
                    "}";
+        }
+
+        /// <summary>
+        /// Sends the workbook-backed six-module geometry with the route request.
+        /// The route API uses this only after the whole-unit attempt fails, so
+        /// enabling disassembly does not silently replace the rigid-footprint
+        /// check.  An empty result preserves the older three-envelope fallback
+        /// when the optional catalog endpoint is unavailable.
+        /// </summary>
+        private static string BuildRouteLayoutModulesJson(int originalModelId)
+        {
+            IReadOnlyList<AhuEquipmentLayoutCatalogService.LayoutModule> layout =
+                AhuEquipmentLayoutCatalogService.TryGetLayout(originalModelId);
+            if (layout == null || layout.Count != 6)
+            {
+                DiagnosticRecorder.AppendDebug(
+                    "[CutAndReplanApi] subModulesUnavailable modelId=" +
+                    originalModelId.ToString(CultureInfo.InvariantCulture) +
+                    ", count=" + (layout == null ? "0" : layout.Count.ToString(CultureInfo.InvariantCulture)));
+                return "[]";
+            }
+
+            StringBuilder builder = new StringBuilder();
+            builder.Append('[');
+            bool wroteModule = false;
+
+            foreach (AhuEquipmentLayoutCatalogService.LayoutModule module in layout)
+            {
+                if (module == null || string.IsNullOrWhiteSpace(module.Key) ||
+                    module.LengthMillimeters <= 0 || module.WidthMillimeters <= 0 ||
+                    module.HeightMillimeters <= 0 || module.Points == null ||
+                    module.Points.Count < 4)
+                {
+                    DiagnosticRecorder.AppendDebug(
+                        "[CutAndReplanApi] subModuleSkipped modelId=" +
+                        originalModelId.ToString(CultureInfo.InvariantCulture) +
+                        ", reason=invalid_catalog_geometry");
+                    return "[]";
+                }
+
+                if (wroteModule)
+                {
+                    builder.Append(',');
+                }
+
+                builder.Append("{\"module\":\"")
+                    .Append(EscapeJson(module.Key))
+                    .Append("\",\"name\":\"")
+                    .Append(EscapeJson(module.Name))
+                    .Append("\",\"length_mm\":")
+                    .Append(module.LengthMillimeters.ToString(CultureInfo.InvariantCulture))
+                    .Append(",\"width_mm\":")
+                    .Append(module.WidthMillimeters.ToString(CultureInfo.InvariantCulture))
+                    .Append(",\"height_mm\":")
+                    .Append(module.HeightMillimeters.ToString(CultureInfo.InvariantCulture))
+                    .Append(",\"points\":[");
+
+                bool wrotePoint = false;
+                foreach (double[] point in module.Points)
+                {
+                    if (point == null || point.Length < 2)
+                    {
+                        continue;
+                    }
+
+                    if (wrotePoint)
+                    {
+                        builder.Append(',');
+                    }
+
+                    builder.Append('[')
+                        .Append(point[0].ToString("0.###", CultureInfo.InvariantCulture))
+                        .Append(',')
+                        .Append(point[1].ToString("0.###", CultureInfo.InvariantCulture))
+                        .Append(']');
+                    wrotePoint = true;
+                }
+
+                if (!wrotePoint)
+                {
+                    DiagnosticRecorder.AppendDebug(
+                        "[CutAndReplanApi] subModuleSkipped modelId=" +
+                        originalModelId.ToString(CultureInfo.InvariantCulture) +
+                        ", module=" + module.Key + ", reason=no_points");
+                    return "[]";
+                }
+
+                builder.Append("]}");
+                wroteModule = true;
+            }
+
+            builder.Append(']');
+            DiagnosticRecorder.AppendDebug(
+                "[CutAndReplanApi] subModulesAttached modelId=" +
+                originalModelId.ToString(CultureInfo.InvariantCulture) +
+                ", count=6");
+            return builder.ToString();
         }
 
         private static string BuildRestrictedAreaJson(IList<RestrictedAreaRequestItem> restrictedAreas)
@@ -260,8 +378,16 @@ namespace CadToRevit.Services.PathPreview
         public static bool DrawPathFromResponse(Document doc, UIDocument uiDoc, string responseText)
         {
             CalculatePathResponseDto response = DeserializeResponse(responseText);
-            PathPolyline path = BuildPathPolyline(response);
-            if (path == null || path.Points == null || path.Points.Count < 2)
+            List<PathPolyline> paths = BuildTransportGroupPathPolylines(response);
+            if (paths.Count == 0)
+            {
+                PathPolyline fallback = BuildPathPolyline(response);
+                if (fallback != null && fallback.Points != null && fallback.Points.Count >= 2)
+                {
+                    paths.Add(fallback);
+                }
+            }
+            if (paths.Count == 0)
             {
                 DiagnosticRecorder.AppendDebug("[CalculatePathApi] No drawable path_points found in response.");
                 return false;
@@ -274,13 +400,21 @@ namespace CadToRevit.Services.PathPreview
                 previewView = PathPreviewViewService.GetOrCreate(doc);
                 PathPreviewViewService.PrepareForSourceDocPreview(previewView);
                 Path3DVisualizationService.Clear(doc);
-                Path3DVisualizationService.Draw(doc, previewView, path, false);
+                if (paths.Count == 1)
+                {
+                    Path3DVisualizationService.Draw(doc, previewView, paths[0], false);
+                }
+                else
+                {
+                    Path3DVisualizationService.DrawMany(doc, previewView, paths, false);
+                }
                 tx.Commit();
             }
 
             DiagnosticRecorder.AppendDebug(
                 "[CalculatePathApi] Draw path_points count=" +
-                path.Points.Count.ToString(CultureInfo.InvariantCulture));
+                paths.Sum(x => x.Points.Count).ToString(CultureInfo.InvariantCulture) +
+                ", transportPaths=" + paths.Count.ToString(CultureInfo.InvariantCulture));
 
             if (previewView != null && uiDoc != null)
             {
@@ -305,10 +439,20 @@ namespace CadToRevit.Services.PathPreview
 
             if (response.Success.Value != true)
             {
+                int redZoneCount = DrawFailureRedZones(doc, uiDoc, response);
+                string failureMessage = string.IsNullOrWhiteSpace(response.Message)
+                    ? "Path planning failed."
+                    : response.Message;
+                if (redZoneCount > 0)
+                {
+                    failureMessage += " Failed locations highlighted in red (" + redZoneCount + ").";
+                }
                 return CreateFailure(
-                    string.IsNullOrWhiteSpace(response.Message) ? "Path planning failed." : response.Message,
+                    failureMessage,
                     responseText,
-                    response.PathLengthMeters);
+                    response.PathLengthMeters,
+                    response,
+                    redZoneCount);
             }
 
             View3D activeView = uiDoc.ActiveView as View3D;
@@ -317,8 +461,26 @@ namespace CadToRevit.Services.PathPreview
                 return CreateFailure("Please open a 3D view before generating delivery route.", responseText, response.PathLengthMeters);
             }
 
-            PathPolyline path = BuildPathPolyline(response);
-            if (path == null || path.Points == null || path.Points.Count < 2)
+            List<PathPolyline> paths = BuildTransportGroupPathPolylines(response);
+            if (response.NeedCut == true && response.CutOptions != null &&
+                response.CutOptions.Groups != null &&
+                paths.Count != response.CutOptions.Groups.Count)
+            {
+                return CreateFailure(
+                    "The backend selected disassembly but did not return a complete set of drawable transport paths.",
+                    responseText,
+                    response.PathLengthMeters,
+                    response);
+            }
+            if (paths.Count == 0)
+            {
+                PathPolyline fallback = BuildPathPolyline(response);
+                if (fallback != null && fallback.Points != null && fallback.Points.Count >= 2)
+                {
+                    paths.Add(fallback);
+                }
+            }
+            if (paths.Count == 0)
             {
                 return CreateFailure(
                     string.IsNullOrWhiteSpace(response.Message) ? "Path planning failed." : response.Message,
@@ -330,7 +492,14 @@ namespace CadToRevit.Services.PathPreview
             {
                 tx.Start();
                 Path3DVisualizationService.Clear(doc);
-                Path3DVisualizationService.Draw(doc, activeView, path, false);
+                if (paths.Count == 1)
+                {
+                    Path3DVisualizationService.Draw(doc, activeView, paths[0], false);
+                }
+                else
+                {
+                    Path3DVisualizationService.DrawMany(doc, activeView, paths, false);
+                }
                 tx.Commit();
             }
 
@@ -340,7 +509,12 @@ namespace CadToRevit.Services.PathPreview
                 Drawn = true,
                 Message = string.IsNullOrWhiteSpace(response.Message) ? "Delivery route generated." : response.Message,
                 ResponseBody = responseText,
-                PathLengthMeters = response.PathLengthMeters
+                PathLengthMeters = response.PathLengthMeters,
+                FailureType = response.FailureType,
+                RedZoneCount = response.RedZones != null ? response.RedZones.Count : 0,
+                AppliedRestrictionCount = response.AppliedRestrictions != null ? response.AppliedRestrictions.Count : 0,
+                NeedCut = response.NeedCut == true,
+                Strategy = response.CutOptions != null ? response.CutOptions.Strategy : null
             };
         }
 
@@ -479,10 +653,20 @@ namespace CadToRevit.Services.PathPreview
 
                 if (response.Success.Value != true)
                 {
+                    int redZoneCount = DrawFailureRedZones(doc, uiDoc, response);
+                    string failureMessage = string.IsNullOrWhiteSpace(response.Message)
+                        ? "Path planning failed."
+                        : response.Message;
+                    if (redZoneCount > 0)
+                    {
+                        failureMessage += " Failed locations highlighted in red (" + redZoneCount + ").";
+                    }
                     return CreateFailure(
-                        string.IsNullOrWhiteSpace(response.Message) ? "Path planning failed." : response.Message,
+                        failureMessage,
                         responseText,
-                        response.PathLengthMeters);
+                        response.PathLengthMeters,
+                        response,
+                        redZoneCount);
                 }
 
                 bool drawn = DrawPathFromResponse(doc, uiDoc, responseText);
@@ -500,7 +684,12 @@ namespace CadToRevit.Services.PathPreview
                     Drawn = true,
                     Message = string.IsNullOrWhiteSpace(response.Message) ? "Delivery route generated." : response.Message,
                     ResponseBody = responseText,
-                    PathLengthMeters = response.PathLengthMeters
+                    PathLengthMeters = response.PathLengthMeters,
+                    FailureType = response.FailureType,
+                    RedZoneCount = response.RedZones != null ? response.RedZones.Count : 0,
+                    AppliedRestrictionCount = response.AppliedRestrictions != null ? response.AppliedRestrictions.Count : 0,
+                    NeedCut = response.NeedCut == true,
+                    Strategy = response.CutOptions != null ? response.CutOptions.Strategy : null
                 };
             }
             catch (Exception ex)
@@ -514,7 +703,7 @@ namespace CadToRevit.Services.PathPreview
 
         private static double ToMillimeters(double feetValue)
         {
-            return feetValue * 304.8;
+            return IfcMillimeterCoordinateAdapter.FeetToMillimeters(feetValue);
         }
 
         private static CalculatePathResponseDto DeserializeResponse(string json)
@@ -530,6 +719,89 @@ namespace CadToRevit.Services.PathPreview
             {
                 return serializer.ReadObject(stream) as CalculatePathResponseDto;
             }
+        }
+
+        private static int DrawFailureRedZones(Document doc, UIDocument uiDoc, CalculatePathResponseDto response)
+        {
+            if (doc == null || uiDoc == null || response == null || response.RedZones == null || response.RedZones.Count == 0)
+            {
+                return 0;
+            }
+
+            List<RedZonePoint3D> redZones = new List<RedZonePoint3D>();
+            for (int i = 0; i < response.RedZones.Count; i++)
+            {
+                RedZoneDto item = response.RedZones[i];
+                if (item == null || !IsFinite(item.XMillimeters) || !IsFinite(item.YMillimeters))
+                {
+                    continue;
+                }
+
+                redZones.Add(new RedZonePoint3D
+                {
+                    X = item.XMillimeters,
+                    Y = item.YMillimeters,
+                    Z = IsFinite(item.ZMillimeters) ? item.ZMillimeters : 0.0,
+                    CellSizeMm = IsFinite(item.CellSizeMillimeters) && item.CellSizeMillimeters > 0.0
+                        ? item.CellSizeMillimeters
+                        : 100.0,
+                    Reasons = item.Reasons ?? new List<string>()
+                });
+            }
+
+            if (redZones.Count == 0)
+            {
+                return 0;
+            }
+
+            View3D view3D = uiDoc.ActiveView as View3D;
+            if (view3D == null)
+            {
+                view3D = PathPreviewViewService.GetOrCreate(doc);
+            }
+            if (view3D == null)
+            {
+                DiagnosticRecorder.AppendDebug("[CalculatePathApi] No View3D available for red zones.");
+                return 0;
+            }
+
+            Path3DVisualizationService.DrawResult drawResult;
+            IList<ElementId> drawElementIds = null;
+            using (Transaction tx = new Transaction(doc, "Draw Failed Path Red Zones"))
+            {
+                tx.Start();
+                Path3DVisualizationService.Clear(doc);
+                PathPreviewViewService.PrepareForSourceDocPreview(view3D);
+                drawResult = Path3DVisualizationService.DrawRedZones(doc, view3D, redZones);
+                drawElementIds = drawResult.ElementIds;
+                if (drawElementIds != null && drawElementIds.Count > 0)
+                {
+                    PathPreviewViewService.FitToModelAndPath(view3D, null);
+                }
+                tx.Commit();
+            }
+
+            if (uiDoc.ActiveView.Id != view3D.Id)
+            {
+                uiDoc.RequestViewChange(view3D);
+            }
+            else if (drawElementIds != null && drawElementIds.Count > 0)
+            {
+                try
+                {
+                    uiDoc.ShowElements(drawElementIds);
+                }
+                catch
+                {
+                    // Framing is diagnostic/UI polish; do not turn a backend
+                    // failure response into a Revit API error.
+                }
+            }
+
+            DiagnosticRecorder.AppendDebug(
+                "[CalculatePathApi] Failed path red zones drawn=" +
+                drawResult.RedZoneCount.ToString(CultureInfo.InvariantCulture));
+            return drawResult.RedZoneCount;
         }
 
         private static PathPolyline BuildPathPolyline(CalculatePathResponseDto response)
@@ -631,6 +903,98 @@ namespace CadToRevit.Services.PathPreview
             return path.Points.Count >= 2 ? path : null;
         }
 
+        private static List<PathPolyline> BuildTransportGroupPathPolylines(
+            CalculatePathResponseDto response)
+        {
+            List<PathPolyline> result = new List<PathPolyline>();
+            List<TransportGroupDto> groups = response != null && response.CutOptions != null
+                ? response.CutOptions.Groups
+                : null;
+            if (groups == null || groups.Count == 0)
+            {
+                return result;
+            }
+
+            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
+            {
+                TransportGroupDto group = groups[groupIndex];
+                if (group == null || group.Dimensions == null ||
+                    group.PathPoints == null || group.PathPoints.Count < 2 ||
+                    (!string.IsNullOrWhiteSpace(group.VerificationStatus) &&
+                     !IsAcceptedTransportVerificationStatus(group.VerificationStatus)))
+                {
+                    return new List<PathPolyline>();
+                }
+
+                double lengthMm = ResolveSegmentDimensionMm(
+                    group.Dimensions.LengthMillimeters,
+                    group.Dimensions.LengthMeters,
+                    0.0);
+                double widthMm = ResolveSegmentDimensionMm(
+                    group.Dimensions.WidthMillimeters,
+                    group.Dimensions.WidthMeters,
+                    0.0);
+                double heightMm = ResolveSegmentDimensionMm(
+                    group.Dimensions.HeightMillimeters,
+                    group.Dimensions.HeightMeters,
+                    0.0);
+                if (!IsPositiveFinite(lengthMm) || !IsPositiveFinite(widthMm) ||
+                    !IsPositiveFinite(heightMm))
+                {
+                    return new List<PathPolyline>();
+                }
+
+                PathPolyline path = new PathPolyline
+                {
+                    PathId = "DELIVERY_ROUTE_UNIT_" +
+                        (groupIndex + 1).ToString("000", CultureInfo.InvariantCulture),
+                    CoordinateBase = "MODEL_MM",
+                    Frame = "XY",
+                    Unit = "mm",
+                    BoxLengthMm = lengthMm,
+                    BoxWidthMm = widthMm,
+                    BoxHeightMm = heightMm
+                };
+                for (int pointIndex = 0; pointIndex < group.PathPoints.Count; pointIndex++)
+                {
+                    List<double> coordinates = group.PathPoints[pointIndex];
+                    if (coordinates == null || coordinates.Count < 2)
+                    {
+                        continue;
+                    }
+
+                    double? orientation = null;
+                    if (group.OrientationPath != null &&
+                        pointIndex < group.OrientationPath.Count &&
+                        IsFinite(group.OrientationPath[pointIndex]))
+                    {
+                        orientation = ConvertApiOrientationToRevitRadians(
+                            group.OrientationPath[pointIndex]);
+                    }
+                    path.Points.Add(new PathPoint3D(
+                        coordinates[0],
+                        coordinates[1],
+                        coordinates.Count >= 3 ? coordinates[2] : 0.0,
+                        orientation));
+                }
+
+                if (path.Points.Count < 2)
+                {
+                    return new List<PathPolyline>();
+                }
+
+                result.Add(path);
+            }
+
+            return result;
+        }
+
+        private static bool IsAcceptedTransportVerificationStatus(string verificationStatus)
+        {
+            return string.Equals(verificationStatus, "independently_verified", StringComparison.Ordinal) ||
+                string.Equals(verificationStatus, "verified_exact_input_cache", StringComparison.Ordinal);
+        }
+
         private static LargestSegmentDto ResolveLargestSegment(
             CalculatePathResponseDto response,
             out int submoduleMaxIndex,
@@ -667,7 +1031,7 @@ namespace CadToRevit.Services.PathPreview
 
         private static double ConvertApiOrientationToRevitRadians(double apiRadians)
         {
-            return NormalizeRadians(-apiRadians);
+            return IfcMillimeterCoordinateAdapter.ApiRadiansToRevitRadians(apiRadians);
         }
 
         private static double NormalizeRadians(double angle)
@@ -764,7 +1128,12 @@ namespace CadToRevit.Services.PathPreview
                 .Replace("\"", "\\\"");
         }
 
-        private static CalculatePathExecutionResult CreateFailure(string message, string responseBody, double? pathLengthMeters)
+        private static CalculatePathExecutionResult CreateFailure(
+            string message,
+            string responseBody,
+            double? pathLengthMeters,
+            CalculatePathResponseDto response = null,
+            int redZoneCount = 0)
         {
             return new CalculatePathExecutionResult
             {
@@ -772,7 +1141,16 @@ namespace CadToRevit.Services.PathPreview
                 Drawn = false,
                 Message = string.IsNullOrWhiteSpace(message) ? "Failed to generate delivery route." : message,
                 ResponseBody = responseBody,
-                PathLengthMeters = pathLengthMeters
+                PathLengthMeters = pathLengthMeters,
+                FailureType = response != null ? response.FailureType : null,
+                RedZoneCount = redZoneCount,
+                AppliedRestrictionCount = response != null && response.AppliedRestrictions != null
+                    ? response.AppliedRestrictions.Count
+                    : 0,
+                NeedCut = response != null && response.NeedCut == true,
+                Strategy = response != null && response.CutOptions != null
+                    ? response.CutOptions.Strategy
+                    : null
             };
         }
 
@@ -802,11 +1180,42 @@ namespace CadToRevit.Services.PathPreview
 
             [DataMember(Name = "cut_options")]
             public CutOptionsDto CutOptions { get; set; }
+
+            [DataMember(Name = "red_zones")]
+            public List<RedZoneDto> RedZones { get; set; }
+
+            [DataMember(Name = "failure_type")]
+            public string FailureType { get; set; }
+
+            [DataMember(Name = "applied_restrictions")]
+            public List<RestrictedAreaRequestItem> AppliedRestrictions { get; set; }
+        }
+
+        [DataContract]
+        private sealed class RedZoneDto
+        {
+            [DataMember(Name = "x_mm")]
+            public double XMillimeters { get; set; }
+
+            [DataMember(Name = "y_mm")]
+            public double YMillimeters { get; set; }
+
+            [DataMember(Name = "z_mm")]
+            public double ZMillimeters { get; set; }
+
+            [DataMember(Name = "cell_size_mm")]
+            public double CellSizeMillimeters { get; set; }
+
+            [DataMember(Name = "reasons")]
+            public List<string> Reasons { get; set; }
         }
 
         [DataContract]
         private sealed class CutOptionsDto
         {
+            [DataMember(Name = "strategy")]
+            public string Strategy { get; set; }
+
             [DataMember(Name = "submodule_results")]
             public List<LargestSegmentDto> SubmoduleResults { get; set; }
 
@@ -816,6 +1225,50 @@ namespace CadToRevit.Services.PathPreview
 
             [DataMember(Name = "selected_segment")]
             public LargestSegmentDto SelectedSegment { get; set; }
+
+            [DataMember(Name = "groups")]
+            public List<TransportGroupDto> Groups { get; set; }
+        }
+
+        [DataContract]
+        private sealed class TransportGroupDto
+        {
+            [DataMember(Name = "name")]
+            public string Name { get; set; }
+
+            [DataMember(Name = "verification_status")]
+            public string VerificationStatus { get; set; }
+
+            [DataMember(Name = "path_points_ifc")]
+            public List<List<double>> PathPoints { get; set; }
+
+            [DataMember(Name = "orientation_path")]
+            public List<double> OrientationPath { get; set; }
+
+            [DataMember(Name = "dimensions")]
+            public TransportDimensionsDto Dimensions { get; set; }
+        }
+
+        [DataContract]
+        private sealed class TransportDimensionsDto
+        {
+            [DataMember(Name = "length_m")]
+            public double? LengthMeters { get; set; }
+
+            [DataMember(Name = "width_m")]
+            public double? WidthMeters { get; set; }
+
+            [DataMember(Name = "height_m")]
+            public double? HeightMeters { get; set; }
+
+            [DataMember(Name = "length_mm")]
+            public double? LengthMillimeters { get; set; }
+
+            [DataMember(Name = "width_mm")]
+            public double? WidthMillimeters { get; set; }
+
+            [DataMember(Name = "height_mm")]
+            public double? HeightMillimeters { get; set; }
         }
 
         [DataContract]
