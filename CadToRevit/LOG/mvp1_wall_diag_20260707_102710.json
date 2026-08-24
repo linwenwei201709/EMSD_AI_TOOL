@@ -1,0 +1,14 @@
+﻿{
+  "unit": "Millimeter",
+  "scaleToFeet": 1.00000000,
+  "selectedLayers": ["ADA2131P"],
+  "centerlineCount": 268,
+  "mergedWalls": 433,
+  "refinedWalls": 350,
+  "clusteredEndpointCount": 6,
+  "extendedEndpointCount": 880,
+  "duplicateRemovedCount": 83,
+  "offAxisSnappedCount": 11,
+  "createdWallCount": 268,
+  "failureReasons": []
+}

@@ -1,0 +1,19 @@
+﻿LayerSummary=ADA214_ _
+RawSegmentCount=2680
+FilteredSegmentCount=260
+CandidateDoubleLineCount=359
+CandidateSingleLineCount=51
+WallCreatedCount=308
+SkippedCount=0
+SafeModeEnabled=True
+IsCanceled=False
+ExceptionMessage=
+
+T1_BuildMs=0
+T2_FilterMs=1897
+T3_RecognizeMs=233
+T4_CreateMs=1641
+T5_JoinMs=0
+TTotalMs=1929
+CommitBatchMs=229,17,393,21,657,26,17
+TopSkipReasons=

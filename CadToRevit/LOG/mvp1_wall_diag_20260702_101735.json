@@ -1,0 +1,14 @@
+﻿{
+  "unit": "Feet",
+  "scaleToFeet": 1.00000000,
+  "selectedLayers": ["ADA213G"],
+  "centerlineCount": 3,
+  "mergedWalls": 5,
+  "refinedWalls": 3,
+  "clusteredEndpointCount": 8,
+  "extendedEndpointCount": 0,
+  "duplicateRemovedCount": 2,
+  "offAxisSnappedCount": 1,
+  "createdWallCount": 3,
+  "failureReasons": []
+}

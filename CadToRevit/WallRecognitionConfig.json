@@ -1,0 +1,20 @@
+{
+  "MinWallLengthMm": 800,
+  "ParallelAngleTolDeg": 2,
+  "WallThicknessTolMm": 60,
+  "EndpointMergeTolMm": 50,
+  "EnableMergeCollinear": false,
+  "ArcThicknessTolMm": 20,
+  "MaxWallThicknessMm": 300,
+  "DefaultSingleWallThicknessMm": 127,
+  "Topology": {
+    "EndpointClusterTolMm": 15,
+    "ExtendSearchTolMm": 30,
+    "DuplicateTolMm": 6,
+    "AngleSnapDeg": 0.5,
+    "EnableOrthogonalSnap": true,
+    "EnableExtendToIntersection": true,
+    "EnableEndpointClustering": true,
+    "EnableDuplicateRemoval": true
+  }
+}

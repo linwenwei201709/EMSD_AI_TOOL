@@ -1,0 +1,12 @@
+﻿Unit: Feet
+ScaleToFeet: 1.00000000
+SelectedLayers: ADA280_P
+CenterlineCount: 0
+MergedWalls: 0
+RefinedWalls: 0
+ClusteredEndpointCount: 0
+ExtendedEndpointCount: 0
+DuplicateRemovedCount: 0
+OffAxisSnappedCount: 0
+CreatedWallCount: 43
+FailureReasons: 

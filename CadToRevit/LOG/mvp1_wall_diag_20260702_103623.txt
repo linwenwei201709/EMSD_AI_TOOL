@@ -1,0 +1,12 @@
+﻿Unit: Feet
+ScaleToFeet: 1.00000000
+SelectedLayers: ADA2131P
+CenterlineCount: 283
+MergedWalls: 461
+RefinedWalls: 372
+ClusteredEndpointCount: 6
+ExtendedEndpointCount: 862
+DuplicateRemovedCount: 89
+OffAxisSnappedCount: 15
+CreatedWallCount: 283
+FailureReasons: 

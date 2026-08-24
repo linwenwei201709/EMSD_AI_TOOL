@@ -1,0 +1,12 @@
+﻿Unit: Inch
+ScaleToFeet: 1.00000000
+SelectedLayers: E-C-HEAD
+CenterlineCount: 3
+MergedWalls: 3
+RefinedWalls: 3
+ClusteredEndpointCount: 0
+ExtendedEndpointCount: 0
+DuplicateRemovedCount: 0
+OffAxisSnappedCount: 0
+CreatedWallCount: 3
+FailureReasons: 

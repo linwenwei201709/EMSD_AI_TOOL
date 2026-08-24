@@ -1,0 +1,19 @@
+﻿LayerSummary=ADA315_H
+RawSegmentCount=2968
+FilteredSegmentCount=0
+CandidateDoubleLineCount=0
+CandidateSingleLineCount=0
+WallCreatedCount=0
+SkippedCount=4
+SafeModeEnabled=True
+IsCanceled=False
+ExceptionMessage=
+
+T1_BuildMs=0
+T2_FilterMs=4072
+T3_RecognizeMs=0
+T4_CreateMs=0
+T5_JoinMs=0
+TTotalMs=4102
+CommitBatchMs=
+TopSkipReasons=Door: Door transaction failed: RolledBack.:2 | Door: Door transaction committed but instance was removed by failure processor.:2

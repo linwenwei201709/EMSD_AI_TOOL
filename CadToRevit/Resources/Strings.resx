@@ -1,0 +1,1360 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Common.OK" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Common.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Common.Yes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="Common.No" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="Common.Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Common.Preview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="Common.Export" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="Common.Import" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="Common.Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Common.Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Common.Reset" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="Common.Enable" xml:space="preserve">
+    <value>Enable</value>
+  </data>
+  <data name="Common.Disable" xml:space="preserve">
+    <value>Disable</value>
+  </data>
+  <data name="Common.Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Common.Browse" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="Common.Level" xml:space="preserve">
+    <value>Level</value>
+  </data>
+  <data name="Common.Unit" xml:space="preserve">
+    <value>Unit</value>
+  </data>
+  <data name="Common.Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Common.Selected" xml:space="preserve">
+    <value>Selected</value>
+  </data>
+  <data name="Common.Ignore" xml:space="preserve">
+    <value>Ignore</value>
+  </data>
+  <data name="Common.Layer" xml:space="preserve">
+    <value>Layer</value>
+  </data>
+  <data name="Common.Category" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="Common.FamilyType" xml:space="preserve">
+    <value>Family Type</value>
+  </data>
+  <data name="Common.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Ribbon.Tab.CadToRevit" xml:space="preserve">
+    <value>EMSD AI Tool</value>
+  </data>
+  <data name="Ribbon.Panel.Tools" xml:space="preserve">
+    <value>EMSD AI Tools</value>
+  </data>
+  <data name="Ribbon.Panel.PathTools" xml:space="preserve">
+    <value>Path Tools</value>
+  </data>
+  <data name="Ribbon.Panel.IntegrationTools" xml:space="preserve">
+    <value>Integration Tools</value>
+  </data>
+  <data name="Ribbon.Panel.TestTools" xml:space="preserve">
+    <value>Room Tools</value>
+  </data>
+  <data name="Ribbon.Panel.Config" xml:space="preserve">
+    <value>Configuration</value>
+  </data>
+  <data name="Ribbon.Panel.Part3Tools" xml:space="preserve">
+    <value>Part3 Tools</value>
+  </data>
+  <data name="Ribbon.Button.ImportDwg" xml:space="preserve">
+    <value>Import Dwg</value>
+  </data>
+  <data name="Ribbon.Button.RvtModelImport" xml:space="preserve">
+    <value>RVT Model Import</value>
+  </data>
+  <data name="Ribbon.Button.RvtModelImport.Tooltip" xml:space="preserve">
+    <value>Open an RVT model for Part 3 planning.</value>
+  </data>
+  <data name="Ribbon.Button.RoutePlanner" xml:space="preserve">
+    <value>Route Planner</value>
+  </data>
+  <data name="Ribbon.Button.RoutePlanner.Tooltip" xml:space="preserve">
+    <value>Open the route planner.</value>
+  </data>
+  <data name="Ribbon.Button.RefreshDwg" xml:space="preserve">
+    <value>Refresh DWG</value>
+  </data>
+  <data name="Ribbon.Button.MainPanel" xml:space="preserve">
+    <value>Main Panel</value>
+  </data>
+  <data name="Ribbon.Button.GlobalSettings" xml:space="preserve">
+    <value>Global Settings</value>
+  </data>
+  <data name="Ribbon.Button.GlobalSettings.Tooltip" xml:space="preserve">
+    <value>Open the project-level global settings window.</value>
+  </data>
+  <data name="Ribbon.Button.FamilyLibraryManager" xml:space="preserve">
+    <value>Family Manager</value>
+  </data>
+  <data name="Ribbon.Button.FamilyLibraryManager.Tooltip" xml:space="preserve">
+    <value>Manage the AHU family library and catalog.json entries.</value>
+  </data>
+  <data name="GlobalSettings.Title" xml:space="preserve">
+    <value>Global Settings</value>
+  </data>
+  <data name="GlobalSettings.Tab.General" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="GlobalSettings.Tab.Walls" xml:space="preserve">
+    <value>Walls</value>
+  </data>
+  <data name="GlobalSettings.Tab.Doors" xml:space="preserve">
+    <value>Doors</value>
+  </data>
+  <data name="GlobalSettings.Tab.Rooms" xml:space="preserve">
+    <value>Rooms</value>
+  </data>
+  <data name="GlobalSettings.SafeMode" xml:space="preserve">
+    <value>Safe Mode</value>
+  </data>
+  <data name="GlobalSettings.AutoJoinWalls" xml:space="preserve">
+    <value>Auto Join Walls</value>
+  </data>
+  <data name="GlobalSettings.HeadRoom" xml:space="preserve">
+    <value>Head Room (mm)</value>
+  </data>
+  <data name="GlobalSettings.UseGlobalWallHeight" xml:space="preserve">
+    <value>Use Global Wall Height</value>
+  </data>
+  <data name="GlobalSettings.GlobalWallHeight" xml:space="preserve">
+    <value>Global Wall Height (mm)</value>
+  </data>
+  <data name="GlobalSettings.UseGlobalDoorHeight" xml:space="preserve">
+    <value>Use Global Door Height</value>
+  </data>
+  <data name="GlobalSettings.GlobalDoorHeight" xml:space="preserve">
+    <value>Global Door Height (mm)</value>
+  </data>
+  <data name="GlobalSettings.UseGlobalDoorSillHeight" xml:space="preserve">
+    <value>Use Global Door Sill Height</value>
+  </data>
+  <data name="GlobalSettings.GlobalDoorSillHeight" xml:space="preserve">
+    <value>Global Door Sill Height (mm)</value>
+  </data>
+  <data name="GlobalSettings.RecognitionWindow" xml:space="preserve">
+    <value>Recognition Window (m)</value>
+  </data>
+  <data name="GlobalSettings.TargetKeywords" xml:space="preserve">
+    <value>Target Keywords</value>
+  </data>
+  <data name="GlobalSettings.DoorGapMax" xml:space="preserve">
+    <value>Max Door Gap (mm)</value>
+  </data>
+  <data name="GlobalSettings.SmallGapPatch" xml:space="preserve">
+    <value>Small Gap Patch (mm)</value>
+  </data>
+  <data name="GlobalSettings.Validation.Positive" xml:space="preserve">
+    <value>{0} must be a number greater than 0.</value>
+  </data>
+  <data name="GlobalSettings.Validation.NonNegative" xml:space="preserve">
+    <value>{0} must be a number greater than or equal to 0.</value>
+  </data>
+  <data name="GlobalSettings.NoActiveDocument" xml:space="preserve">
+    <value>No active document.</value>
+  </data>
+  <data name="FamilyLibrary.Title" xml:space="preserve">
+    <value>Family Library Manager</value>
+  </data>
+  <data name="FamilyLibrary.Subtitle" xml:space="preserve">
+    <value>Manage AHU family files and the catalog.json metadata used by the room detail pane.</value>
+  </data>
+  <data name="FamilyLibrary.Button.Add" xml:space="preserve">
+    <value>Add Family</value>
+  </data>
+  <data name="FamilyLibrary.Button.Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="FamilyLibrary.Button.Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="FamilyLibrary.Editor.Title" xml:space="preserve">
+    <value>Edit Selected Family</value>
+  </data>
+  <data name="FamilyLibrary.Column.DisplayName" xml:space="preserve">
+    <value>Display Name</value>
+  </data>
+  <data name="FamilyLibrary.Column.FileName" xml:space="preserve">
+    <value>File Name</value>
+  </data>
+  <data name="FamilyLibrary.Column.Enabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="FamilyLibrary.Column.SortOrder" xml:space="preserve">
+    <value>Sort Order</value>
+  </data>
+  <data name="FamilyLibrary.Column.Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="FamilyLibrary.Field.DisplayName" xml:space="preserve">
+    <value>Display Name</value>
+  </data>
+  <data name="FamilyLibrary.Field.FileName" xml:space="preserve">
+    <value>File Name</value>
+  </data>
+  <data name="FamilyLibrary.Field.Enabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="FamilyLibrary.Field.SortOrder" xml:space="preserve">
+    <value>Sort Order</value>
+  </data>
+  <data name="FamilyLibrary.Field.Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="FamilyLibrary.Field.CatalogPath" xml:space="preserve">
+    <value>Catalog Path</value>
+  </data>
+  <data name="FamilyLibrary.OpenFile.Filter" xml:space="preserve">
+    <value>Revit Family Files (*.rfa)|*.rfa</value>
+  </data>
+  <data name="FamilyLibrary.Delete.SelectionRequired" xml:space="preserve">
+    <value>Please select a family entry first.</value>
+  </data>
+  <data name="FamilyLibrary.Delete.Confirm" xml:space="preserve">
+    <value>Delete "{0}" from the library now? The physical .rfa file will also be removed immediately.</value>
+  </data>
+  <data name="FamilyLibrary.Delete.RemovedUnsaved" xml:space="preserve">
+    <value>Removed the unsaved family from the list.</value>
+  </data>
+  <data name="FamilyLibrary.Delete.PendingChanges" xml:space="preserve">
+    <value>There are pending add or edit changes. Please save or refresh them before deleting an existing family.</value>
+  </data>
+  <data name="FamilyLibrary.Delete.NotFoundInCatalog" xml:space="preserve">
+    <value>The selected family no longer exists in catalog.json.</value>
+  </data>
+  <data name="FamilyLibrary.Delete.Success" xml:space="preserve">
+    <value>Family deleted successfully.</value>
+  </data>
+  <data name="FamilyLibrary.Error.SelectedFileMissing" xml:space="preserve">
+    <value>Selected family file does not exist.</value>
+  </data>
+  <data name="FamilyLibrary.Error.OnlyRfaFiles" xml:space="preserve">
+    <value>Only .rfa files can be added.</value>
+  </data>
+  <data name="FamilyLibrary.Error.SaveMissingSourceFile" xml:space="preserve">
+    <value>A newly added family is missing its source file.</value>
+  </data>
+  <data name="FamilyLibrary.Error.SaveDestinationExists" xml:space="preserve">
+    <value>The destination family file already exists: {0}</value>
+  </data>
+  <data name="FamilyLibrary.Error.DisplayNameRequired" xml:space="preserve">
+    <value>Family display name cannot be empty.</value>
+  </data>
+  <data name="FamilyLibrary.Save.Success" xml:space="preserve">
+    <value>Family library saved successfully.</value>
+  </data>
+  <data name="FamilyLibrary.UnsavedChanges.Refresh" xml:space="preserve">
+    <value>Discard unsaved changes and reload the library list?</value>
+  </data>
+  <data name="FamilyLibrary.UnsavedChanges.Close" xml:space="preserve">
+    <value>There are unsaved changes. Close the window and discard them?</value>
+  </data>
+  <data name="FamilyLibrary.Status.Saved" xml:space="preserve">
+    <value>No pending changes</value>
+  </data>
+  <data name="FamilyLibrary.Status.Unsaved" xml:space="preserve">
+    <value>Unsaved changes</value>
+  </data>
+  <data name="Ribbon.Button.PathPreview" xml:space="preserve">
+    <value>Path Preview</value>
+  </data>
+  <data name="Ribbon.Button.Ground" xml:space="preserve">
+    <value>Create Ground</value>
+  </data>
+  <data name="Ribbon.Button.ExportIfc" xml:space="preserve">
+    <value>Export IFC</value>
+  </data>
+  <data name="Ribbon.Button.Help" xml:space="preserve">
+    <value>Precautions</value>
+  </data>
+  <data name="Ribbon.Button.HealthCheck" xml:space="preserve">
+    <value>Health Check</value>
+  </data>
+  <data name="Ribbon.Button.ProjectInit" xml:space="preserve">
+    <value>Project Init</value>
+  </data>
+  <data name="Ribbon.Button.PickPathCoordinates" xml:space="preserve">
+    <value>Pick Path Coordinates</value>
+  </data>
+  <data name="Ribbon.Button.RoomRec" xml:space="preserve">
+    <value>Detect Rooms</value>
+  </data>
+  <data name="Ribbon.Button.SetDoorWidth" xml:space="preserve">
+    <value>Set Door Width</value>
+  </data>
+  <data name="Ribbon.Button.ImportDwg.Tooltip" xml:space="preserve">
+    <value>Import a DWG file.</value>
+  </data>
+  <data name="Ribbon.Button.RefreshDwg.Tooltip" xml:space="preserve">
+    <value>Check whether the current DWG file changed and reload the current link if needed.</value>
+  </data>
+  <data name="Ribbon.Button.MainPanel.Tooltip" xml:space="preserve">
+    <value>Open main panel.</value>
+  </data>
+  <data name="Ribbon.Button.PathPreview.Tooltip" xml:space="preserve">
+    <value>Show 3D path preview.</value>
+  </data>
+  <data name="Ribbon.Button.Ground.Tooltip" xml:space="preserve">
+    <value>Create ground floor.</value>
+  </data>
+  <data name="Ribbon.Button.ExportIfc.Tooltip" xml:space="preserve">
+    <value>Export IFC file.</value>
+  </data>
+  <data name="Ribbon.Button.Help.Tooltip" xml:space="preserve">
+    <value>Show help.</value>
+  </data>
+  <data name="Ribbon.Button.HealthCheck.Tooltip" xml:space="preserve">
+    <value>Run a placeholder integration health check.</value>
+  </data>
+  <data name="Ribbon.Button.ProjectInit.Tooltip" xml:space="preserve">
+    <value>Run a placeholder project initialization flow.</value>
+  </data>
+  <data name="Ribbon.Button.PickPathCoordinates.Tooltip" xml:space="preserve">
+    <value>Pick path points in AI_PATH_PREVIEW_3D and write JSON coordinates to the log.</value>
+  </data>
+  <data name="Ribbon.Button.RoomRec.Tooltip" xml:space="preserve">
+    <value>Open room recognition.</value>
+  </data>
+  <data name="Ribbon.Button.SetDoorWidth.Tooltip" xml:space="preserve">
+    <value>Set door width for testing.</value>
+  </data>
+  <data name="DockablePane.Title.CadImportWizard" xml:space="preserve">
+    <value>CAD Import Wizard</value>
+  </data>
+  <data name="DockablePane.Status.NotAnalyzed" xml:space="preserve">
+    <value>Not analyzed</value>
+  </data>
+  <data name="DockablePane.Status.Success" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="DockablePane.Status.Failed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="DockablePane.Status.HighlightedGeneratedElements" xml:space="preserve">
+    <value>Highlighted {0} generated elements for layer {1}.</value>
+  </data>
+  <data name="DockablePane.Status.NoGeneratedElementsForLayer" xml:space="preserve">
+    <value>No generated elements found for layer {0}.</value>
+  </data>
+  <data name="DockablePane.Status.HighlightUnavailable" xml:space="preserve">
+    <value>No CAD link or level found for highlight.</value>
+  </data>
+  <data name="DockablePane.Status.InvalidSelectedLayer" xml:space="preserve">
+    <value>No valid selected layer.</value>
+  </data>
+  <data name="DockablePane.Status.HighlightCleared" xml:space="preserve">
+    <value>Generated element highlight cleared.</value>
+  </data>
+  <data name="DockablePane.Label.LastAnalyzeFormat" xml:space="preserve">
+    <value>Last Analyze: {0}</value>
+  </data>
+  <data name="DockablePane.Button.LayerAnalyze" xml:space="preserve">
+    <value>Layer Analyze</value>
+  </data>
+  <data name="DockablePane.Button.CadHide" xml:space="preserve">
+    <value>Hide CAD</value>
+  </data>
+  <data name="DockablePane.Button.CadShow" xml:space="preserve">
+    <value>Show CAD</value>
+  </data>
+  <data name="DockablePane.Button.BuildingHide" xml:space="preserve">
+    <value>Hide Elements</value>
+  </data>
+  <data name="DockablePane.Button.BuildingShow" xml:space="preserve">
+    <value>Show Elements</value>
+  </data>
+  <data name="DockablePane.Button.Save" xml:space="preserve">
+    <value>Save Config</value>
+  </data>
+  <data name="DockablePane.Button.Preview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="DockablePane.Button.GenElements" xml:space="preserve">
+    <value>Gen Elements</value>
+  </data>
+  <data name="DockablePane.Button.Export" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="DockablePane.Button.Regenerate" xml:space="preserve">
+    <value>Regenerate</value>
+  </data>
+  <data name="DockablePane.Button.SelectAll" xml:space="preserve">
+    <value>Select All</value>
+  </data>
+  <data name="DockablePane.Button.DeselectAll" xml:space="preserve">
+    <value>Deselect All</value>
+  </data>
+  <data name="DockablePane.Column.Selected" xml:space="preserve">
+    <value>Selected</value>
+  </data>
+  <data name="DockablePane.Column.LayerName" xml:space="preserve">
+    <value>LayerName</value>
+  </data>
+  <data name="DockablePane.Column.Category" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="DockablePane.Label.Layers" xml:space="preserve">
+    <value>Layers</value>
+  </data>
+  <data name="DockablePane.Label.Selected" xml:space="preserve">
+    <value>Selected</value>
+  </data>
+  <data name="DockablePane.Label.Ignore" xml:space="preserve">
+    <value>Ignore</value>
+  </data>
+  <data name="DockablePane.Feedback.Title" xml:space="preserve">
+    <value>Operation Feedback</value>
+  </data>
+  <data name="DockablePane.Status.DwgFormat" xml:space="preserve">
+    <value>DWG: {0}</value>
+  </data>
+  <data name="DockablePane.Status.UnitLevelFormat" xml:space="preserve">
+    <value>Unit: {0}   Level: {1}</value>
+  </data>
+  <data name="DockablePane.Status.GeometryCountFormat" xml:space="preserve">
+    <value>Segments: {0}  Arc: {1}  Polyline: {2}</value>
+  </data>
+  <data name="DockablePane.Status.StatusFormat" xml:space="preserve">
+    <value>Status: {0}</value>
+  </data>
+  <data name="DockablePane.Status.Analyzing" xml:space="preserve">
+    <value>Analyzing...</value>
+  </data>
+  <data name="DockablePane.Status.Previewing" xml:space="preserve">
+    <value>Previewing...</value>
+  </data>
+  <data name="DockablePane.Status.Clearing" xml:space="preserve">
+    <value>Clearing preview...</value>
+  </data>
+  <data name="DockablePane.Status.CreatingWalls" xml:space="preserve">
+    <value>Creating walls...</value>
+  </data>
+  <data name="DockablePane.Status.CreatingDoors" xml:space="preserve">
+    <value>Creating doors...</value>
+  </data>
+  <data name="DockablePane.Status.CreatingFloors" xml:space="preserve">
+    <value>Creating floors...</value>
+  </data>
+  <data name="DockablePane.Status.Syncing" xml:space="preserve">
+    <value>Syncing elements...</value>
+  </data>
+  <data name="DockablePane.Status.TogglingCad" xml:space="preserve">
+    <value>Toggling CAD visibility...</value>
+  </data>
+  <data name="DockablePane.Status.TogglingBuilding" xml:space="preserve">
+    <value>Toggling element visibility...</value>
+  </data>
+  <data name="DockablePane.Status.Saved" xml:space="preserve">
+    <value>Saved</value>
+  </data>
+  <data name="DockablePane.Status.Preset" xml:space="preserve">
+    <value>Preset</value>
+  </data>
+  <data name="DockablePane.Status.PerfLog" xml:space="preserve">
+    <value>PerfLog</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.Title" xml:space="preserve">
+    <value>Global Advanced Settings</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.SafeMode" xml:space="preserve">
+    <value>Safe Mode (Recommended)</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.AutoJoin" xml:space="preserve">
+    <value>Auto Join Walls After Create</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.RoomRecognition" xml:space="preserve">
+    <value>Room Recognition</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.RecognitionWindow" xml:space="preserve">
+    <value>Recognition Window (m)</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.RoomTextLayers" xml:space="preserve">
+    <value>Room Text Layers</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.TargetKeywords" xml:space="preserve">
+    <value>Target Keywords</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.RoomDoorGapMax" xml:space="preserve">
+    <value>Room Door Gap Max(mm)</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.RoomSmallGapPatch" xml:space="preserve">
+    <value>Room Small Gap Patch(mm)</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.HeadRoom" xml:space="preserve">
+    <value>Head room</value>
+  </data>
+  <data name="DockablePane.Field.WallHeightMm" xml:space="preserve">
+    <value>Wall Height (WallHeightMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallBaseOffsetMm" xml:space="preserve">
+    <value>Wall Base Offset (WallBaseOffsetMm)</value>
+  </data>
+  <data name="DockablePane.Field.MinWallLengthMm" xml:space="preserve">
+    <value>Min Wall Length (MinWallLengthMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallThicknessTolMm" xml:space="preserve">
+    <value>Wall Thickness Tolerance (WallThicknessTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.MaxWallThicknessMm" xml:space="preserve">
+    <value>Max Wall Thickness (MaxWallThicknessMm)</value>
+  </data>
+  <data name="DockablePane.Field.DefaultSingleWallThicknessMm" xml:space="preserve">
+    <value>Default Single-Wall Thickness (DefaultSingleWallThicknessMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallParallelAngleTolDeg" xml:space="preserve">
+    <value>Parallel Angle Tolerance (WallParallelAngleTolDeg)</value>
+  </data>
+  <data name="DockablePane.Field.WallEndpointMergeTolMm" xml:space="preserve">
+    <value>Endpoint Merge Tolerance (WallEndpointMergeTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallArcThicknessTolMm" xml:space="preserve">
+    <value>Arc-Wall Thickness Tolerance (WallArcThicknessTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallEndpointClusterTolMm" xml:space="preserve">
+    <value>Endpoint Cluster Tolerance (WallEndpointClusterTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallExtendSearchTolMm" xml:space="preserve">
+    <value>Extend Search Tolerance (WallExtendSearchTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallDuplicateTolMm" xml:space="preserve">
+    <value>Duplicate Line Tolerance (WallDuplicateTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallAngleSnapDeg" xml:space="preserve">
+    <value>Angle Snap Tolerance (WallAngleSnapDeg)</value>
+  </data>
+  <data name="DockablePane.Field.WallExtendCollinearTolMm" xml:space="preserve">
+    <value>Collinear Extend Tolerance (WallExtendCollinearTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallCollinearOffsetTolMm" xml:space="preserve">
+    <value>Collinear Offset Tolerance (WallCollinearOffsetTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallExtendProjectionTolMm" xml:space="preserve">
+    <value>Projection Extend Tolerance (WallExtendProjectionTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableOrthogonalSnap" xml:space="preserve">
+    <value>Enable Orthogonal Snap (WallEnableOrthogonalSnap)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableExtendToIntersection" xml:space="preserve">
+    <value>Enable Extend To Intersection (WallEnableExtendToIntersection)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableEndpointClustering" xml:space="preserve">
+    <value>Enable Endpoint Clustering (WallEnableEndpointClustering)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableDuplicateRemoval" xml:space="preserve">
+    <value>Enable Duplicate Removal (WallEnableDuplicateRemoval)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableExtendCollinear" xml:space="preserve">
+    <value>Enable Collinear Extend (WallEnableExtendCollinear)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableMergeCollinear" xml:space="preserve">
+    <value>Enable Collinear Merge (WallEnableMergeCollinear)</value>
+  </data>
+  <data name="DockablePane.Field.WallUseDirectionalClustering" xml:space="preserve">
+    <value>Enable Directional Clustering (WallUseDirectionalClustering)</value>
+  </data>
+  <data name="DockablePane.Field.WallForceSingleLineMode" xml:space="preserve">
+    <value>Force Single-Line Mode (WallForceSingleLineMode)</value>
+  </data>
+  <data name="DockablePane.Field.WallDoubleLineSingleWallPlaceMode" xml:space="preserve">
+    <value>Double-Line Single-Wall Place Mode (WallDoubleLineSingleWallPlaceMode)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableAutoDoubleLineThickness" xml:space="preserve">
+    <value>Enable Auto Double-Line Thickness (WallEnableAutoDoubleLineThickness)</value>
+  </data>
+  <data name="DockablePane.Field.WallAutoThicknessTopK" xml:space="preserve">
+    <value>Thickness Peak TopK (WallAutoThicknessTopK)</value>
+  </data>
+  <data name="DockablePane.Field.WallAutoThicknessBinMm" xml:space="preserve">
+    <value>Thickness Bin (mm) (WallAutoThicknessBinMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallMinDoubleLineThicknessMm" xml:space="preserve">
+    <value>Min Double-Line Wall Thickness (mm) (WallMinDoubleLineThicknessMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallMinDoubleLineOverlapLenMm" xml:space="preserve">
+    <value>Min Double-Line Overlap (mm) (WallMinDoubleLineOverlapLenMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallDoubleLineLengthPolicy" xml:space="preserve">
+    <value>Double-Line Length Policy (WallDoubleLineLengthPolicy)</value>
+  </data>
+  <data name="DockablePane.Field.WallDoubleLineAdaptiveContainTolMm" xml:space="preserve">
+    <value>Adaptive Contain Tolerance (mm) (WallDoubleLineAdaptiveContainTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallDoubleLineAdaptiveExtendMaxMm" xml:space="preserve">
+    <value>Adaptive Endpoint Extend Max (mm) (WallDoubleLineAdaptiveExtendMaxMm)</value>
+  </data>
+  <data name="DockablePane.Field.EnableOverride" xml:space="preserve">
+    <value>Enable Override</value>
+  </data>
+  <data name="DockablePane.Field.ApplyCategoryDefault" xml:space="preserve">
+    <value>Apply Category Default</value>
+  </data>
+  <data name="DockablePane.Field.DoorHeightMm" xml:space="preserve">
+    <value>Door Height (DoorHeightMm)</value>
+  </data>
+  <data name="DockablePane.Field.DoorSillHeightMm" xml:space="preserve">
+    <value>Door Sill Height (DoorSillHeightMm)</value>
+  </data>
+  <data name="DockablePane.Field.MinDoorWidthMm" xml:space="preserve">
+    <value>Min Door Width (MinDoorWidthMm)</value>
+  </data>
+  <data name="DockablePane.Field.MaxDoorWidthMm" xml:space="preserve">
+    <value>Max Door Width (MaxDoorWidthMm)</value>
+  </data>
+  <data name="DockablePane.Field.DoorWallMatchTolMm" xml:space="preserve">
+    <value>Door-Wall Match Tolerance (DoorWallMatchTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.UseFixedDoorWidth" xml:space="preserve">
+    <value>Use Fixed Door Width (UseFixedDoorWidth)</value>
+  </data>
+  <data name="DockablePane.Field.DoorExpectedWidthMm" xml:space="preserve">
+    <value>Fixed Door Width (DoorExpectedWidthMm)</value>
+  </data>
+  <data name="DockablePane.Field.PreferGeometryOpeningWidth" xml:space="preserve">
+    <value>Prefer Geometry Opening Width (PreferGeometryOpeningWidth)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnClusterAlgorithm" xml:space="preserve">
+    <value>Cluster Algorithm (ColumnClusterAlgorithm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnClusterTolMm" xml:space="preserve">
+    <value>Cluster Distance (ColumnClusterTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMinGroupSegments" xml:space="preserve">
+    <value>Min Segment Count (ColumnMinGroupSegments)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMinSizeMm" xml:space="preserve">
+    <value>Min Size (ColumnMinSizeMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMaxSizeMm" xml:space="preserve">
+    <value>Max Size (ColumnMaxSizeMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnEnableLongLineFilter" xml:space="preserve">
+    <value>Enable Long-Line Filter (ColumnEnableLongLineFilter)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMaxSegmentLengthMm" xml:space="preserve">
+    <value>Max Segment Length (ColumnMaxSegmentLengthMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnEnableMerge" xml:space="preserve">
+    <value>Enable Candidate Merge (ColumnEnableMerge)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMergeTolMm" xml:space="preserve">
+    <value>Merge Distance (ColumnMergeTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMergeStrategy" xml:space="preserve">
+    <value>Merge Strategy (ColumnMergeStrategy)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnEndpointTolMm" xml:space="preserve">
+    <value>Endpoint Tolerance (ColumnEndpointTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnGapTolMm" xml:space="preserve">
+    <value>Gap Tolerance (ColumnGapTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMinAreaM2" xml:space="preserve">
+    <value>Min Area (ColumnMinAreaM2)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMaxAspectRatio" xml:space="preserve">
+    <value>Max Aspect Ratio (ColumnMaxAspectRatio)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMinFillRatio" xml:space="preserve">
+    <value>Min Fill Ratio (ColumnMinFillRatio)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnDedupePlacedTolMm" xml:space="preserve">
+    <value>Placed Dedupe Distance (ColumnDedupePlacedTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnAreaWeight" xml:space="preserve">
+    <value>Area Weight (ColumnAreaWeight)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnSegmentCountWeight" xml:space="preserve">
+    <value>Segment Count Weight (ColumnSegmentCountWeight)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnRectnessWeight" xml:space="preserve">
+    <value>Rectness Weight (ColumnRectnessWeight)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnLongLinePenalty" xml:space="preserve">
+    <value>Long-Line Penalty (ColumnLongLinePenalty)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnIrregularEnable" xml:space="preserve">
+    <value>Enable Irregular Column (ColumnIrregularEnable)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnIrregularMaxSizeMm" xml:space="preserve">
+    <value>Irregular Max Size (ColumnIrregularMaxSizeMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnIrregularGapTolMm" xml:space="preserve">
+    <value>Irregular Gap Tolerance (ColumnIrregularGapTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnIrregularMinAreaM2" xml:space="preserve">
+    <value>Irregular Min Area (ColumnIrregularMinAreaM2)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnAttachToWallEnable" xml:space="preserve">
+    <value>Enable Wall Attach (ColumnAttachToWallEnable)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnAttachToWallSnapTolMm" xml:space="preserve">
+    <value>Wall Attach Snap Distance (ColumnAttachToWallSnapTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnAttachToWallTarget" xml:space="preserve">
+    <value>Wall Attach Target (ColumnAttachToWallTarget)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnAttachToWallAllowOverlap" xml:space="preserve">
+    <value>Allow Overlap On Wall Attach (ColumnAttachToWallAllowOverlap)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnDebugDrawCandidates" xml:space="preserve">
+    <value>Debug: Draw Candidates (ColumnDebugDrawCandidates)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnDebugDrawClusterId" xml:space="preserve">
+    <value>Debug: Draw Cluster ID (ColumnDebugDrawClusterId)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnDebugDrawRejectReason" xml:space="preserve">
+    <value>Debug: Draw Reject Reason (ColumnDebugDrawRejectReason)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnDebugExportReport" xml:space="preserve">
+    <value>Debug: Export Report (ColumnDebugExportReport)</value>
+  </data>
+  <data name="LayerAnalysis.WindowTitle" xml:space="preserve">
+    <value>Layer Analysis Result</value>
+  </data>
+  <data name="LayerAnalysis.StandardTitle" xml:space="preserve">
+    <value>EMSD CAD Layer Code Standard</value>
+  </data>
+  <data name="LayerAnalysis.ValidationCompleted" xml:space="preserve">
+    <value>Layer validation completed</value>
+  </data>
+  <data name="LayerAnalysis.ValidLayers" xml:space="preserve">
+    <value>Valid Layers</value>
+  </data>
+  <data name="LayerAnalysis.InvalidLayers" xml:space="preserve">
+    <value>Invalid Layers</value>
+  </data>
+  <data name="LayerAnalysis.DwgFormat" xml:space="preserve">
+    <value>DWG: {0}</value>
+  </data>
+  <data name="LayerAnalysis.Unknown" xml:space="preserve">
+    <value>(Unknown)</value>
+  </data>
+  <data name="LayerAnalysis.SummaryFormat" xml:space="preserve">
+    <value>Total {0} layers, {1} match EMSD CAD standard.</value>
+  </data>
+  <data name="LayerAnalysis.None" xml:space="preserve">
+    <value>(None)</value>
+  </data>
+  <data name="LayerAnalysis.UnmatchedStandard" xml:space="preserve">
+    <value>Unmatched Standard</value>
+  </data>
+  <data name="LayerAnalysis.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="DockablePane.Settings.Title" xml:space="preserve">
+    <value>Layer Settings</value>
+  </data>
+  <data name="DockablePane.Settings.TitleWithLayer" xml:space="preserve">
+    <value>Layer Settings - {0}</value>
+  </data>
+  <data name="DockablePane.Settings.LayerFormat" xml:space="preserve">
+    <value>Layer: {0}</value>
+  </data>
+  <data name="DockablePane.Settings.CategoryFormat" xml:space="preserve">
+    <value>Category: {0}</value>
+  </data>
+  <data name="DockablePane.Settings.RevitParamsSummaryFormat" xml:space="preserve">
+    <value>Category={0}, FamilyType={1}</value>
+  </data>
+  <data name="DockablePane.Settings.DebugSummaryFormat" xml:space="preserve">
+    <value>Override={0}, Default={1}, MinLen={2}, Wall={3}</value>
+  </data>
+  <data name="DockablePane.Message.ConfirmSave" xml:space="preserve">
+    <value>Confirm save current layer mappings?</value>
+  </data>
+  <data name="DockablePane.Message.ConfirmSync" xml:space="preserve">
+    <value>Sync model by current layer selection?
+
+- Selected layers will be generated or rebuilt
+- Unselected CadToRevit-generated elements will be removed
+- Changed-parameter layers will be rebuilt with current settings</value>
+  </data>
+  <data name="DockablePane.Message.Saved" xml:space="preserve">
+    <value>Saved.</value>
+  </data>
+  <data name="DockablePane.Message.Done" xml:space="preserve">
+    <value>Done.</value>
+  </data>
+  <data name="DockablePane.Message.SyncFinished" xml:space="preserve">
+    <value>Sync finished.</value>
+  </data>
+  <data name="DockablePane.Message.SyncResultTitle" xml:space="preserve">
+    <value>CadToRevit - Sync Result</value>
+  </data>
+  <data name="DockablePane.Message.ConfirmRegenerate" xml:space="preserve">
+    <value>This will delete the old generated elements for the current DWG and rebuild them with the current layer mappings. Continue?</value>
+  </data>
+  <data name="DockablePane.Message.RegenerateFinished" xml:space="preserve">
+    <value>Regenerate finished.</value>
+  </data>
+  <data name="DockablePane.Message.RegenerateResultTitle" xml:space="preserve">
+    <value>CadToRevit - Regenerate Result</value>
+  </data>
+  <data name="DockablePane.Message.PresetExported" xml:space="preserve">
+    <value>Preset exported.</value>
+  </data>
+  <data name="DockablePane.Label.SavedAtFormat" xml:space="preserve">
+    <value>Saved at {0}</value>
+  </data>
+  <data name="DockablePane.Label.LastActionFormat" xml:space="preserve">
+    <value>Last Action: {0}</value>
+  </data>
+  <data name="DockablePane.Label.PresetExportedAtFormat" xml:space="preserve">
+    <value>Preset exported at {0}</value>
+  </data>
+  <data name="DockablePane.Label.PerfLogCopiedAtFormat" xml:space="preserve">
+    <value>Perf log copied at {0}</value>
+  </data>
+  <data name="Common.NA" xml:space="preserve">
+    <value>N/A</value>
+  </data>
+  <data name="Progress.Ready" xml:space="preserve">
+    <value>Preparing...</value>
+  </data>
+  <data name="Progress.Cancelling" xml:space="preserve">
+    <value>Cancelling...</value>
+  </data>
+  <data name="DockablePane.Tab.Normal" xml:space="preserve">
+    <value>Normal</value>
+  </data>
+  <data name="DockablePane.Tab.Expert" xml:space="preserve">
+    <value>Expert</value>
+  </data>
+  <data name="DockablePane.Tab.RevitParams" xml:space="preserve">
+    <value>Revit Params</value>
+  </data>
+  <data name="DockablePane.Tab.Debug" xml:space="preserve">
+    <value>Debug</value>
+  </data>
+  <data name="DockablePane.Tab.WallRecognition" xml:space="preserve">
+    <value>Recognition</value>
+  </data>
+  <data name="DockablePane.Tab.WallModeling" xml:space="preserve">
+    <value>Modeling</value>
+  </data>
+  <data name="DockablePane.Tab.WallDoubleLine" xml:space="preserve">
+    <value>Double-Line</value>
+  </data>
+  <data name="DockablePane.Tab.WallTopology" xml:space="preserve">
+    <value>Topology</value>
+  </data>
+  <data name="Dialog.Info.Title" xml:space="preserve">
+    <value>Information</value>
+  </data>
+  <data name="Dialog.HealthCheck.Title" xml:space="preserve">
+    <value>Health Check</value>
+  </data>
+  <data name="Dialog.HealthCheck.Success" xml:space="preserve">
+    <value>OK. Health check succeeded.
+Server Time: {0}
+Sessions: {1}</value>
+  </data>
+  <data name="Dialog.HealthCheck.Failed" xml:space="preserve">
+    <value>Health check failed.
+Status: {0}
+Response: {1}</value>
+  </data>
+  <data name="Dialog.HealthCheck.Error" xml:space="preserve">
+    <value>Health check request failed: {0}</value>
+  </data>
+  <data name="Dialog.ProjectInit.Title" xml:space="preserve">
+    <value>Project Initialization</value>
+  </data>
+  <data name="Dialog.ProjectInit.HeadroomHeight" xml:space="preserve">
+    <value>Headroom Height</value>
+  </data>
+  <data name="Dialog.ProjectInit.DoorWidthToleranceMm" xml:space="preserve">
+    <value>Door Width Tolerance (mm)</value>
+  </data>
+  <data name="Dialog.ProjectInit.DwgFilePath" xml:space="preserve">
+    <value>DWG File Path</value>
+  </data>
+  <data name="Dialog.ProjectInit.ProjectName" xml:space="preserve">
+    <value>Project Name</value>
+  </data>
+  <data name="Dialog.ProjectInit.ProjectIdentifier" xml:space="preserve">
+    <value>Project Identifier</value>
+  </data>
+  <data name="Dialog.ProjectInit.Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Dialog.ProjectInit.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Dialog.ProjectInit.InvalidHeadroomHeight" xml:space="preserve">
+    <value>Please enter a valid numeric headroom height.</value>
+  </data>
+  <data name="Dialog.ProjectInit.InvalidDoorWidthToleranceMm" xml:space="preserve">
+    <value>Please enter a valid numeric door width tolerance in millimeters.</value>
+  </data>
+  <data name="Dialog.ProjectInit.ResultTitle" xml:space="preserve">
+    <value>Project initialization completed</value>
+  </data>
+  <data name="Dialog.ProjectInit.ResponseSummary" xml:space="preserve">
+    <value>Headroom Height: {0}
+Door Width Tolerance (mm): {1}
+Project Name: {2}
+Project Identifier: {3}
+DWG File Path: {4}
+Expand below to view the full response.</value>
+  </data>
+  <data name="Dialog.ProjectInit.ErrorTitle" xml:space="preserve">
+    <value>Project initialization failed</value>
+  </data>
+  <data name="Dialog.ProjectInit.ErrorSummary" xml:space="preserve">
+    <value>Expand below to view the full error details.</value>
+  </data>
+  <data name="Dialog.Warning.Title" xml:space="preserve">
+    <value>Warning</value>
+  </data>
+  <data name="Dialog.Error.Title" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Dialog.Validation.Title" xml:space="preserve">
+    <value>Validation</value>
+  </data>
+  <data name="Dialog.OperationSucceeded.Title" xml:space="preserve">
+    <value>Operation Succeeded</value>
+  </data>
+  <data name="Dialog.OperationFailed.Title" xml:space="preserve">
+    <value>Operation Failed</value>
+  </data>
+  <data name="Dialog.NoCadLink.Message" xml:space="preserve">
+    <value>No CAD Link (ImportInstance) found. Please link a CAD file first.</value>
+  </data>
+  <data name="Dialog.NoLevelFound.Message" xml:space="preserve">
+    <value>No Level found in current document.</value>
+  </data>
+  <data name="Dialog.NoSupportedGeometry.Message" xml:space="preserve">
+    <value>No supported geometry found in the selected CAD Link.</value>
+  </data>
+  <data name="Dialog.NoSegmentsExtracted.Message" xml:space="preserve">
+    <value>No segments extracted for WALL/DOOR/WINDOW/GRID.</value>
+  </data>
+  <data name="Dialog.NoWallTypeFound.Message" xml:space="preserve">
+    <value>No WallType found in current document.</value>
+  </data>
+  <data name="Dialog.NoWallCenterlines.Message" xml:space="preserve">
+    <value>No wall centerlines detected from WALL layer.</value>
+  </data>
+  <data name="Dialog.NoLevelOrCeilingType.Message" xml:space="preserve">
+    <value>No Level/CeilingType available.</value>
+  </data>
+  <data name="Command.AnalyzeCadLink.Title" xml:space="preserve">
+    <value>Analyze CAD Link</value>
+  </data>
+  <data name="Command.AnalyzeCadSegments.Title" xml:space="preserve">
+    <value>Analyze CAD Segments</value>
+  </data>
+  <data name="Command.AnalyzeDoorCandidates.Title" xml:space="preserve">
+    <value>Analyze Door Candidates</value>
+  </data>
+  <data name="Command.AnalyzeWallCenterlines.Title" xml:space="preserve">
+    <value>Analyze Wall Centerlines</value>
+  </data>
+  <data name="Command.CreateDoors.Title" xml:space="preserve">
+    <value>Create Doors</value>
+  </data>
+  <data name="Command.CreateWalls.Title" xml:space="preserve">
+    <value>Create Walls</value>
+  </data>
+  <data name="Command.CreateWindows.Title" xml:space="preserve">
+    <value>Create Windows</value>
+  </data>
+  <data name="Command.CreateCeilings.Title" xml:space="preserve">
+    <value>Create Ceilings</value>
+  </data>
+  <data name="Progress.Title" xml:space="preserve">
+    <value>Progress</value>
+  </data>
+  <data name="Progress.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Progress.DetailDefault" xml:space="preserve">
+    <value>Layer: -</value>
+  </data>
+  <data name="Progress.StagePreparing" xml:space="preserve">
+    <value>Preparing</value>
+  </data>
+  <data name="Progress.InitializingTask" xml:space="preserve">
+    <value>Initializing task...</value>
+  </data>
+  <data name="Progress.StageRecognizeGenerate" xml:space="preserve">
+    <value>Stage: Recognize and Generate</value>
+  </data>
+  <data name="Progress.StageCompleted" xml:space="preserve">
+    <value>Stage: Completed</value>
+  </data>
+  <data name="Progress.Analyzing" xml:space="preserve">
+    <value>Analyzing</value>
+  </data>
+  <data name="Progress.Generating" xml:space="preserve">
+    <value>Generating</value>
+  </data>
+  <data name="Progress.Exporting" xml:space="preserve">
+    <value>Exporting</value>
+  </data>
+  <data name="Progress.Completed" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="Progress.DetailLayerFormat" xml:space="preserve">
+    <value>Layer: {0}</value>
+  </data>
+  <data name="Progress.StageJoinPost" xml:space="preserve">
+    <value>Stage: Join Post-process</value>
+  </data>
+  <data name="Progress.JoiningWalls" xml:space="preserve">
+    <value>Joining walls...</value>
+  </data>
+  <data name="Progress.StageCreateWalls" xml:space="preserve">
+    <value>Stage: Create Walls</value>
+  </data>
+  <data name="Progress.StageCreateArcWalls" xml:space="preserve">
+    <value>Stage: Create Arc Walls</value>
+  </data>
+  <data name="Progress.BatchSizeFormat" xml:space="preserve">
+    <value>Batch size={0}</value>
+  </data>
+  <data name="Progress.StageRetrySplit" xml:space="preserve">
+    <value>Stage: Retry Split</value>
+  </data>
+  <data name="Progress.SplitFailedWallBatch" xml:space="preserve">
+    <value>Split failed wall batch...</value>
+  </data>
+  <data name="Progress.SplitFailedArcWallBatch" xml:space="preserve">
+    <value>Split failed arc wall batch...</value>
+  </data>
+  <data name="Dialog.DwgImport.PickFile.Title" xml:space="preserve">
+    <value>Select DWG File</value>
+  </data>
+  <data name="Dialog.DwgImport.PickFile.Filter" xml:space="preserve">
+    <value>DWG Files (*.dwg)|*.dwg</value>
+  </data>
+  <data name="Dialog.DwgImport.ReplaceExisting.Title" xml:space="preserve">
+    <value>DWG Link Detected</value>
+  </data>
+  <data name="Dialog.DwgImport.ReplaceExisting.Message" xml:space="preserve">
+    <value>A DWG Link already exists in this project. Replace it with the new file?{0}Click Yes to remove old DWG Link and import again.</value>
+  </data>
+  <data name="Dialog.DwgImport.Failed.Title" xml:space="preserve">
+    <value>Import Failed</value>
+  </data>
+  <data name="Dialog.DwgImport.Failed.MessageFormat" xml:space="preserve">
+    <value>DWG import failed: {0}</value>
+  </data>
+  <data name="Dialog.DwgImport.Success.Title" xml:space="preserve">
+    <value>Import Completed</value>
+  </data>
+  <data name="Dialog.DwgImport.Success.MessageFormat" xml:space="preserve">
+    <value>DWG Link imported successfully.{0}Instance ID: {1}{0}Layer Count: {2}</value>
+  </data>
+  <data name="Dialog.DwgImport.Success.UnitSuspicious" xml:space="preserve">
+    <value>Warning: Imported bounding box looks abnormally large. Please check source DWG units.</value>
+  </data>
+  <data name="Dialog.DwgRefresh.Title" xml:space="preserve">
+    <value>DWG Refresh Result</value>
+  </data>
+  <data name="Dialog.DwgRefresh.NoChange" xml:space="preserve">
+    <value>DWG has no updates.</value>
+  </data>
+  <data name="Dialog.DwgRefresh.Updated" xml:space="preserve">
+    <value>DWG has been updated. The current generated result may be outdated.</value>
+  </data>
+  <data name="Dialog.DwgRefresh.FailedFormat" xml:space="preserve">
+    <value>DWG refresh failed: {0}</value>
+  </data>
+  <data name="Dialog.DwgRefresh.NoLink" xml:space="preserve">
+    <value>No DWG Link found in the current project.</value>
+  </data>
+  <data name="Dialog.DwgRefresh.PathResolveFailed" xml:space="preserve">
+    <value>Unable to resolve the current DWG file path.</value>
+  </data>
+  <data name="Dialog.DwgRefresh.FileMissing" xml:space="preserve">
+    <value>The DWG file does not exist.</value>
+  </data>
+  <data name="Dialog.DwgRefresh.ReloadUnsupported" xml:space="preserve">
+    <value>The current Revit API does not support DWG link reload for this link.</value>
+  </data>
+  <data name="DockablePane.RoomList.Title" xml:space="preserve">
+    <value>Room Management</value>
+  </data>
+  <data name="DockablePane.RoomList.SummaryFormat" xml:space="preserve">
+    <value>Found: {0} | Errors: {1}</value>
+  </data>
+  <data name="DockablePane.RoomList.Empty" xml:space="preserve">
+    <value>No matched target rooms.</value>
+  </data>
+  <data name="DockablePane.RoomList.AreaFormat" xml:space="preserve">
+    <value>Area: {0}</value>
+  </data>
+  <data name="DockablePane.RoomList.LevelFormat" xml:space="preserve">
+    <value>Level: {0}</value>
+  </data>
+  <data name="DockablePane.RoomList.StatusFormat" xml:space="preserve">
+    <value>Status: {0}</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Title" xml:space="preserve">
+    <value>Room Detail</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Area" xml:space="preserve">
+    <value>Area</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Level" xml:space="preserve">
+    <value>Level</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Boundary" xml:space="preserve">
+    <value>Boundary</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Key" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.CloseGap" xml:space="preserve">
+    <value>CloseGap(mm)</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Button.Focus" xml:space="preserve">
+    <value>Focus Room</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Button.Copy" xml:space="preserve">
+    <value>Copy Info</value>
+  </data>
+  <data name="DockablePane.RoomDetail.SelectHint" xml:space="preserve">
+    <value>Please select a room from the left list.</value>
+  </data>
+  <data name="DockablePane.RoomDetail.UnnamedRoom" xml:space="preserve">
+    <value>Unnamed Room</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CopyFormat" xml:space="preserve">
+    <value>Name: {0}
+Type: {1}
+Area: {2}
+Level: {3}
+Status: {4}
+Boundary: {5}
+Key: {6}
+CloseGap(mm): {7}</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamilySectionTitle" xml:space="preserve">
+    <value>Custom Family</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamily.SetButton" xml:space="preserve">
+    <value>Insert</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamily.Empty" xml:space="preserve">
+    <value>No custom family options are available.</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamily.SetSuccess" xml:space="preserve">
+    <value>Custom family inserted successfully: {0}</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamily.SetFailed" xml:space="preserve">
+    <value>Failed to insert custom family: {0}</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamily.FamilyFileMissing" xml:space="preserve">
+    <value>Custom family file is missing: {0}</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.Title" xml:space="preserve">
+    <value>Pipe Selection</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.ChilledWater" xml:space="preserve">
+    <value>Chilled Water:</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.ChilledWaterSupply" xml:space="preserve">
+    <value>CHW Supply:</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.ChilledWaterReturn" xml:space="preserve">
+    <value>CHW Return:</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.HotWater" xml:space="preserve">
+    <value>Hot Water:</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.HotWaterSupply" xml:space="preserve">
+    <value>HW Supply:</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.HotWaterReturn" xml:space="preserve">
+    <value>HW Return:</value>
+  </data>
+  <data name="DockablePane.RoomDetail.DuctSelection.Title" xml:space="preserve">
+    <value>Duct Selection</value>
+  </data>
+  <data name="Ribbon.Button.ProbeRoom" xml:space="preserve">
+    <value>Probe Room</value>
+  </data>
+  <data name="Ribbon.Button.ProbeRoom.Tooltip" xml:space="preserve">
+    <value>Pick a point in the model and probe whether it belongs to a room or a closed space.</value>
+  </data>
+  <data name="RoomProbe.Dialog.Title" xml:space="preserve">
+    <value>Probe Room</value>
+  </data>
+  <data name="RoomProbe.PickPointPrompt" xml:space="preserve">
+    <value>Please pick a point to probe whether a room exists.</value>
+  </data>
+  <data name="RoomProbe.NoRoomFound" xml:space="preserve">
+    <value>No recognizable room was found for the selected point.
+
+{0}</value>
+  </data>
+</root>

@@ -1,0 +1,14 @@
+﻿{
+  "unit": "Millimeter",
+  "scaleToFeet": 1.00000000,
+  "selectedLayers": ["ADA315_H"],
+  "centerlineCount": 0,
+  "mergedWalls": 0,
+  "refinedWalls": 0,
+  "clusteredEndpointCount": 0,
+  "extendedEndpointCount": 0,
+  "duplicateRemovedCount": 0,
+  "offAxisSnappedCount": 0,
+  "createdWallCount": 21,
+  "failureReasons": ["Door: Door transaction failed: RolledBack.", "Door: The referenced object is not valid, possibly because it has been deleted from the database, or its creation was undone.", "Door: The referenced object is not valid, possibly because it has been deleted from the database, or its creation was undone.", "Door: The referenced object is not valid, possibly because it has been deleted from the database, or its creation was undone.", "Door: The referenced object is not valid, possibly because it has been deleted from the database, or its creation was undone.", "Door: The referenced object is not valid, possibly because it has been deleted from the database, or its creation was undone.", "Door: Door transaction committed but instance was removed by failure processor.", "Door: Door transaction committed but instance was removed by failure processor."]
+}

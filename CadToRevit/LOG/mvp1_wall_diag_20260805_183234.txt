@@ -1,0 +1,12 @@
+﻿Unit: Millimeter
+ScaleToFeet: 1.00000000
+SelectedLayers: ADA315_H
+CenterlineCount: 0
+MergedWalls: 0
+RefinedWalls: 0
+ClusteredEndpointCount: 0
+ExtendedEndpointCount: 0
+DuplicateRemovedCount: 0
+OffAxisSnappedCount: 0
+CreatedWallCount: 27
+FailureReasons: Door: Door transaction committed but instance was removed by failure processor. | Door: Door transaction committed but instance was removed by failure processor.

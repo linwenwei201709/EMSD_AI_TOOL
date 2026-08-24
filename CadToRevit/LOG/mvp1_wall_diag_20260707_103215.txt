@@ -1,0 +1,12 @@
+﻿Unit: Millimeter
+ScaleToFeet: 1.00000000
+SelectedLayers: ADA214_ _
+CenterlineCount: 308
+MergedWalls: 410
+RefinedWalls: 308
+ClusteredEndpointCount: 0
+ExtendedEndpointCount: 0
+DuplicateRemovedCount: 102
+OffAxisSnappedCount: 0
+CreatedWallCount: 308
+FailureReasons: 

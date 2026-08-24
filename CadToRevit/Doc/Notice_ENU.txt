@@ -1,0 +1,47 @@
+# Plugin Usage Notes
+To ensure the recognition accuracy and generation stability of EMSD AI TOOL during the CAD-to-Revit conversion process, it is recommended that you perform basic organization of CAD drawings and conduct layer standard checks before formal use. The plugin is equipped with capabilities including layer mapping, layer standard analysis, pre-inspection, logging, and diagnostics. However, the standardization of source drawing files still directly affects the automatic generation of objects such as walls, doors, columns, beams, and rooms.
+
+1. The host wall of a door must be fully represented
+The door object is currently created by recognizing the door geometry in CAD, then automatically matching it with the generated wall to instantiate the door. Therefore, identifiable wall lines must exist at the door position as the host basis. If the corresponding wall line is not drawn at the door opening in CAD, or the wall line is broken or missing at the door position, the plugin may fail to attach the door object correctly, resulting in issues such as door position offset or failed door generation.
+Complete, continuous and identifiable wall lines must be present at the door position. Do not draw only the door leaf without the host wall; otherwise, the door may not be properly generated on the wall.
+【此次插入图片1】
+
+2. Avoid broken walls, short walls and dangling lines near door openings
+Near door positions, if wall lines are excessively fragmented or only short segments remain, the system may identify them as abnormal short walls or small fragmented walls, which impairs door host matching. Especially for corner doors, doors adjacent to wall edges, rebated doors, small openings in thick walls and other scenarios, ensure continuous wall lines and clear closed relationships as much as possible. Minimizing such irregular representations will improve plugin stability.
+
+3. Do not mix different components on the same layer
+Objects such as walls, doors, columns, beams and windows should be placed on separate layers rather than mixed on a single layer. If column lines and wall lines are on the same layer, the plugin may incorrectly process columns as walls during layer-based category mapping and batch generation, leading to recognition type errors and affecting subsequent modeling results.
+
+4. Wall lines shall be clearly represented without excessive clutter interference
+Automatic wall generation is the most mature core function at present, yet it still relies on clear representation of CAD wall lines. Avoid the following situations:
+Duplicate wall lines at the same position, excessive burrs and small fragmented lines, uncleaned auxiliary lines, ambiguous connections at wall corners, excessive intersecting, broken or unclosed lines, and mixing of text, dimension lines, leaders, furniture lines with wall lines on the same recognition layer.
+Although the plugin supports pre-inspection, filtering and connection optimization, excessive clutter in the source drawing will increase the probability of misrecognition.
+
+5. Standardize blocks, door symbols and component representations
+Recognition compatibility will decrease if multiple drawing methods are used for doors, windows, columns and other objects within the same project. It is recommended to unify the representation of door swing arcs, door frame lines, column outlines and windows within the same project. Avoid mixing standard door symbols, block references and freehand line segments for the same object type. The plugin has established basic recognition and generation pipelines for doors, windows and columns; thus, more standardized drawing representations will yield more stable results.
+
+6. Use standardized layer names for easy mapping and standard checking
+The plugin supports layer mapping, parameter configuration, layer standard analysis and in-project persistent storage. It is recommended that clients adopt clear and consistent layer naming conventions when delivering CAD files. For example, separate layers for walls, doors, columns, beams and room text with readable names. This facilitates initial mapping and enables configuration reuse across subsequent projects, reducing repeated parameter tuning.
+
+7. Ensure closed room boundaries and unified room naming
+If the room recognition or target room recognition functions are to be used subsequently, space boundaries in CAD should be closed, and room text naming should be consistent. For key rooms such as electrical rooms and equipment rooms, unify the naming conventions in CAD drawings in advance.
+
+8. Perform a CAD self-inspection before importing
+Before formal import, complete the following basic checks in CAD:
+- Check whether walls, doors, columns and beams are placed on separate layers
+- Check whether complete host wall lines are retained at door positions
+- Check for excessive duplicate, fragmented or broken lines
+- Check whether columns and walls are incorrectly placed on the same layer
+- Check whether room boundaries are closed
+- Check whether key text annotations are clear and legible
+- Check whether units and scales are correct
+This will significantly reduce abnormal warnings and rework after importing into the plugin. Although the plugin supports post-import analysis, layer standard checking, pre-inspection and log diagnostics for DWG files, better pre-processed drawing standardization leads to higher overall efficiency.
+
+9. Prioritize checking layers and host relationships when exceptions occur
+For issues such as "door not generated", "column generated as wall", "incomplete wall generation" or "room recognition failure", troubleshoot in the following order:
+- Whether layer mapping is correct
+- Whether the element is mixed with elements of other categories on the same layer
+- Whether complete wall lines exist at the door position
+- Whether wall lines are too short, broken, overlapping or interfered by clutter
+- Whether room boundaries are closed
+- Whether there are abnormal units, scales or import offset issues

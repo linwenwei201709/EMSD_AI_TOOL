@@ -1,0 +1,12 @@
+﻿Unit: Millimeter
+ScaleToFeet: 1.00000000
+SelectedLayers: LWK-WALL
+CenterlineCount: 123
+MergedWalls: 165
+RefinedWalls: 126
+ClusteredEndpointCount: 0
+ExtendedEndpointCount: 50
+DuplicateRemovedCount: 39
+OffAxisSnappedCount: 0
+CreatedWallCount: 147
+FailureReasons: 

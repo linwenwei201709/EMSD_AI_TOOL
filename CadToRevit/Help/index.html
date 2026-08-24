@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EMSD AI Tool Help Center</title>
+  <link rel="stylesheet" href="css/help.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">E</div>
+        <div>
+          <h1>EMSD AI Tool</h1>
+          <p>Help Center</p>
+        </div>
+      </div>
+
+      <label class="search-wrap">
+        <span>Search</span>
+        <input id="searchBox" type="search" placeholder="Search help topics..." autocomplete="off">
+      </label>
+
+      <nav id="helpNav" aria-label="Help topics">
+        <a href="#getting-started">Getting Started</a>
+        <a href="#model-generation">Model Generation</a>
+        <a href="#room-lift">Room &amp; Lift</a>
+        <a href="#restricted-area">Restricted Area</a>
+        <a href="#layout-plan">Layout Plan</a>
+        <a href="#delivery-route">Delivery Route</a>
+        <a href="#export-ifc">Export IFC</a>
+        <a href="#export-drawing">Export Drawing</a>
+        <a href="#settings">Settings</a>
+        <a href="#family-library">Family Library</a>
+        <a href="#troubleshooting">Troubleshooting</a>
+        <a href="#about">About</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="hero">
+        <p class="eyebrow">LOCAL OFFLINE MANUAL</p>
+        <h2>EMSD AI Tool User Guide</h2>
+        <p>Use the menu on the left or search for a feature, warning, or workflow.</p>
+      </header>
+
+      <section id="getting-started" class="topic" data-search="getting started workflow ribbon revit project">
+        <h3>Getting Started</h3>
+        <p>Open a Revit project, import or refresh the DWG, review layer mappings, and generate the required model elements before using room recognition, equipment layout, or delivery route planning.</p>
+        <ol>
+          <li>Import the DWG and confirm the detected unit and level.</li>
+          <li>Run Layer Analyze and assign Category and Family Type where required.</li>
+          <li>Generate or rebuild walls, columns, doors, and floors.</li>
+          <li>Use Room &amp; Lift to recognize or define the required spaces.</li>
+        </ol>
+      </section>
+
+      <section id="model-generation" class="topic" data-search="dwg refresh layer analyze generate rebuild wall door column floor detach binding">
+        <h3>Model Generation</h3>
+        <p>The CAD Import Wizard converts mapped DWG layers into Revit elements.</p>
+        <ul>
+          <li><strong>Refresh Dwg</strong> reloads the same source drawing while preserving existing layer mappings.</li>
+          <li><strong>Generate</strong> creates elements for a mapped layer.</li>
+          <li><strong>Rebuild</strong> updates generated elements after DWG or parameter changes.</li>
+          <li><strong>Detach Elements</strong> removes the CAD binding while keeping the generated Revit elements.</li>
+        </ul>
+      </section>
+
+      <section id="room-lift" class="topic" data-search="room lift detect create edit locate delete door size internal dimensions">
+        <h3>Room &amp; Lift</h3>
+        <p>Recognize rooms and lifts from the generated model, or create them manually when automatic recognition is incomplete.</p>
+        <ul>
+          <li>Use Auto-Detect after the model has been generated.</li>
+          <li>Use Create Room or Create Lift for manual definition.</li>
+          <li>Edit names and display information from the Room Management pane.</li>
+        </ul>
+      </section>
+
+      <section id="restricted-area" class="topic" data-search="restricted area obstacle no go zone create edit locate delete routing">
+        <h3>Restricted Area</h3>
+        <p>Create no-go areas that are passed to the delivery route API. Restricted areas can be located, renamed, deleted, or cleared from the left pane.</p>
+      </section>
+
+      <section id="layout-plan" class="topic" data-search="layout plan ahu pau new building rmaa replacement oversized valid save submit connectivity">
+        <h3>Layout Plan</h3>
+        <p>Create AHU or PAU layout plans for New Building Design or RMAA / Replacement workflows.</p>
+        <ol>
+          <li>Select the planning context and equipment type.</li>
+          <li>Select a target room and flow rate.</li>
+          <li>Run Size Evaluation and select equipment.</li>
+          <li>Review Valid or Oversized results returned by the room-fit API.</li>
+          <li>Confirm equipment, configure connectivity, then Save or Save &amp; Submit.</li>
+        </ol>
+      </section>
+
+      <section id="delivery-route" class="topic" data-search="delivery route start lift target room generate path compare mode save export report api">
+        <h3>Delivery Route</h3>
+        <ol>
+          <li>Select a Start Lift and Target Room.</li>
+          <li>Ensure the target room has committed equipment from Layout Plan.</li>
+          <li>Click Generate Delivery Route and review the returned route and sub-modules.</li>
+          <li>Save the route, open Detail, compare valid routes, or export the report.</li>
+        </ol>
+      </section>
+
+      <section id="export-ifc" class="topic" data-search="export ifc cleanup model deliverable">
+        <h3>Export IFC</h3>
+        <p>Exports the prepared model for downstream path analysis and deliverables. Temporary room visualizations and designated helper objects are cleaned before export.</p>
+      </section>
+
+      <section id="export-drawing" class="topic" data-search="export drawing pdf top front back left right a2 preview webview2">
+        <h3>Export Drawing</h3>
+        <p>Creates a five-page A2 PDF containing Top, Front, Back, Left, and Right views. The preview is displayed inside the plugin using WebView2.</p>
+      </section>
+
+      <section id="settings" class="topic" data-search="settings global configuration door opening units">
+        <h3>Settings</h3>
+        <p>Review global model generation, recognition, and display settings before processing a new project.</p>
+      </section>
+
+      <section id="family-library" class="topic" data-search="family library ahu equipment dimensions maintenance catalog">
+        <h3>Family Library</h3>
+        <p>Review the available AHU family catalog, equipment dimensions, flow rates, and maintenance information.</p>
+      </section>
+
+      <section id="troubleshooting" class="topic" data-search="troubleshooting error api health check unknown layer door wall placement point oversized route failed webview2">
+        <h3>Troubleshooting</h3>
+        <div class="issue-grid">
+          <article>
+            <h4>Layer shown as Unknown</h4>
+            <p>Select the correct Category and Family Type, then Generate or Rebuild the layer.</p>
+          </article>
+          <article>
+            <h4>Route API is not ready</h4>
+            <p>Open Route API from the ribbon, review its status and log, then run Health Check or Restart API.</p>
+          </article>
+          <article>
+            <h4>Placement point is outside the room</h4>
+            <p>Confirm the red placement-point marker is visually inside the selected room and review the room boundary.</p>
+          </article>
+          <article>
+            <h4>Equipment is Oversized</h4>
+            <p>Review the returned reason. RMAA / Replacement layouts cannot be confirmed or saved when the equipment does not fit.</p>
+          </article>
+          <article>
+            <h4>Door generation failed</h4>
+            <p>Check the selected door family, wall thickness, and Revit failure message. Some families may fail at a specific host-wall thickness.</p>
+          </article>
+          <article>
+            <h4>Help page does not load</h4>
+            <p>Use Open in Browser in the Help Center toolbar and verify that the Help folder is installed beside CadToRevit.dll.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="about" class="topic" data-search="about version revit local offline help">
+        <h3>About</h3>
+        <p>EMSD AI Tool for Autodesk Revit 2024. This help site is stored locally with the plugin and does not require an internet connection or local web server.</p>
+      </section>
+
+      <div id="emptyState" class="empty-state" hidden>No help topics match your search.</div>
+    </main>
+  </div>
+  <script src="js/help.js"></script>
+</body>
+</html>

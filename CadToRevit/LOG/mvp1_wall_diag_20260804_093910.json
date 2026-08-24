@@ -1,0 +1,14 @@
+﻿{
+  "unit": "Millimeter",
+  "scaleToFeet": 1.00000000,
+  "selectedLayers": ["ADA315_H"],
+  "centerlineCount": 0,
+  "mergedWalls": 0,
+  "refinedWalls": 0,
+  "clusteredEndpointCount": 0,
+  "extendedEndpointCount": 0,
+  "duplicateRemovedCount": 0,
+  "offAxisSnappedCount": 0,
+  "createdWallCount": 4,
+  "failureReasons": ["Door: Initial R3D door creation failed: Door transaction failed: RolledBack. Hand-flip retry failed: R3D door family does not support hand flipping.", "Door: Initial R3D door creation failed: Door transaction failed: RolledBack. Hand-flip retry failed: R3D door family does not support hand flipping."]
+}

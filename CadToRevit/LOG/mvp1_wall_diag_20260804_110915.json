@@ -1,0 +1,14 @@
+﻿{
+  "unit": "Millimeter",
+  "scaleToFeet": 1.00000000,
+  "selectedLayers": ["ADA315_H"],
+  "centerlineCount": 0,
+  "mergedWalls": 0,
+  "refinedWalls": 0,
+  "clusteredEndpointCount": 0,
+  "extendedEndpointCount": 0,
+  "duplicateRemovedCount": 0,
+  "offAxisSnappedCount": 0,
+  "createdWallCount": 3,
+  "failureReasons": []
+}

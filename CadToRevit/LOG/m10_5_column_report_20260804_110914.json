@@ -1,0 +1,41 @@
+﻿{
+  "layer": "ADA280_P",
+  "inputSegments": 60,
+  "prefilterSegments": 60,
+  "acceptedCount": 15,
+  "rejectedCount": 0,
+  "acceptedRectCount": 0,
+  "acceptedIrregularCount": 15,
+  "settings": {
+    "algorithm": "EndpointGraph",
+    "clusterTolMm": 350.00,
+    "minGroupSegments": 8,
+    "mergeStrategy": "KeepBest",
+    "columnIrregularEnable": true,
+    "irregularMaxSizeMm": 1800.00,
+    "irregularMinAreaM2": 0.0300,
+    "irregularGapTolMm": 30.00,
+    "irregularMinGroupSegments": 4,
+    "irregularFragmentMergeTolMm": 600.00,
+    "irregularMaxVirtualEdgeLenMm": 300.00
+  },
+  "accepted": [
+    {"clusterId":1,"shapeType":"Irregular","center":"(197.7854,27.3950)","widthFt":1.3805,"depthFt":1.3805,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"1","fragmentMergeReason":"","score":1.808583,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588963"},
+    {"clusterId":2,"shapeType":"Irregular","center":"(200.5585,43.9084)","widthFt":1.2073,"depthFt":1.2073,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"2","fragmentMergeReason":"","score":1.808583,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588958"},
+    {"clusterId":3,"shapeType":"Irregular","center":"(193.1422,27.3387)","widthFt":1.8167,"depthFt":1.3196,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"3","fragmentMergeReason":"","score":2.400000,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588966"},
+    {"clusterId":4,"shapeType":"Irregular","center":"(193.7462,31.6947)","widthFt":1.8045,"depthFt":1.3123,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"4","fragmentMergeReason":"","score":2.398759,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588961"},
+    {"clusterId":5,"shapeType":"Irregular","center":"(193.6099,43.5049)","widthFt":1.8045,"depthFt":1.3123,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"5","fragmentMergeReason":"","score":2.398759,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588961"},
+    {"clusterId":6,"shapeType":"Irregular","center":"(168.7336,12.2539)","widthFt":1.3204,"depthFt":1.3204,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"6","fragmentMergeReason":"","score":1.808583,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588967"},
+    {"clusterId":7,"shapeType":"Irregular","center":"(152.2050,16.0044)","widthFt":1.2312,"depthFt":1.2312,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"7","fragmentMergeReason":"","score":1.808583,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588957"},
+    {"clusterId":8,"shapeType":"Irregular","center":"(168.7757,8.5872)","widthFt":1.8167,"depthFt":1.3196,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"8","fragmentMergeReason":"","score":2.400000,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588967"},
+    {"clusterId":9,"shapeType":"Irregular","center":"(164.4331,9.1825)","widthFt":1.8045,"depthFt":1.3123,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"9","fragmentMergeReason":"","score":2.398759,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588962"},
+    {"clusterId":10,"shapeType":"Irregular","center":"(152.6229,9.0463)","widthFt":1.8045,"depthFt":1.3123,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"10","fragmentMergeReason":"","score":2.398759,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588962"},
+    {"clusterId":11,"shapeType":"Irregular","center":"(127.2638,17.9462)","widthFt":1.2717,"depthFt":1.2717,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"11","fragmentMergeReason":"","score":1.808583,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588968"},
+    {"clusterId":12,"shapeType":"Irregular","center":"(139.9477,29.1889)","widthFt":1.0538,"depthFt":1.0538,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"12","fragmentMergeReason":"","score":1.808583,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588959"},
+    {"clusterId":13,"shapeType":"Irregular","center":"(124.2586,20.0386)","widthFt":1.8167,"depthFt":1.3196,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"13","fragmentMergeReason":"","score":2.400000,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588968"},
+    {"clusterId":14,"shapeType":"Irregular","center":"(127.2869,23.2214)","widthFt":1.8045,"depthFt":1.3123,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"14","fragmentMergeReason":"","score":2.398759,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588960"},
+    {"clusterId":15,"shapeType":"Irregular","center":"(134.0517,32.9032)","widthFt":1.8045,"depthFt":1.3123,"segmentCount":4,"irregularClosedBySelf":true,"helperEdgeUsedCount":0,"danglingEndpoints":0,"gapHealed":false,"fragmentMerged":false,"fragmentSourceClusterIds":"15","fragmentMergeReason":"","score":2.398759,"rejectReason":"","mergeAction":"KeepBest","attachInfo":"Attached:WallId=1588960"}
+  ],
+  "rejected": [
+  ]
+}
