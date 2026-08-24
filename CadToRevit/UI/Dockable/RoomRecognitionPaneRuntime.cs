@@ -8454,6 +8454,7 @@ namespace CadToRevit.UI.Dockable
                 HeightMm = heightMm,
                 Priority = priority,
                 ElementId = element.Id,
+                Direction = ResolveWallDirection(hostWall),
                 WidthSource = widthSource,
                 HeightSource = heightSource
             };
@@ -8575,6 +8576,16 @@ namespace CadToRevit.UI.Dockable
             XYZ direction = line.Direction;
             double length = Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y);
             return length > 1.0e-9 ? new XYZ(direction.X / length, direction.Y / length, 0.0) : null;
+        }
+
+        private static bool IsUsableXyDirection(XYZ value)
+        {
+            return value != null &&
+                !double.IsNaN(value.X) &&
+                !double.IsNaN(value.Y) &&
+                !double.IsInfinity(value.X) &&
+                !double.IsInfinity(value.Y) &&
+                Math.Sqrt(value.X * value.X + value.Y * value.Y) > 1.0e-9;
         }
 
         private static bool IsDoorMetricElement(Element element)
@@ -9066,6 +9077,8 @@ namespace CadToRevit.UI.Dockable
         private sealed class DoorMetricCandidate
         {
             public XYZ Center { get; set; }
+
+            public XYZ Direction { get; set; }
 
             public double WidthMm { get; set; }
 
