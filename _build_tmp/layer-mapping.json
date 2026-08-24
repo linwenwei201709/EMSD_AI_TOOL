@@ -1,6 +1,0 @@
-{
-  "WALL": ["STRUCTURE", "WALL", "A-WALL"],
-  "DOOR": ["DOOR", "DR", "D"],
-  "WINDOW": ["GLASS", "WINDOW", "WIN", "WD"],
-  "GRID": ["GRID", "AXIS"]
-}
