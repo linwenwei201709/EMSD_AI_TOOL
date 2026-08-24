@@ -921,7 +921,7 @@ namespace CadToRevit.Services.PathPreview
                 if (group == null || group.Dimensions == null ||
                     group.PathPoints == null || group.PathPoints.Count < 2 ||
                     (!string.IsNullOrWhiteSpace(group.VerificationStatus) &&
-                     !string.Equals(group.VerificationStatus, "independently_verified", StringComparison.Ordinal)))
+                     !IsAcceptedTransportVerificationStatus(group.VerificationStatus)))
                 {
                     return new List<PathPolyline>();
                 }
@@ -987,6 +987,12 @@ namespace CadToRevit.Services.PathPreview
             }
 
             return result;
+        }
+
+        private static bool IsAcceptedTransportVerificationStatus(string verificationStatus)
+        {
+            return string.Equals(verificationStatus, "independently_verified", StringComparison.Ordinal) ||
+                string.Equals(verificationStatus, "verified_exact_input_cache", StringComparison.Ordinal);
         }
 
         private static LargestSegmentDto ResolveLargestSegment(

@@ -1,5 +1,10 @@
 # Colleague Frontend Compatibility Patch
 
+## 2026-08-24 - Accept cached verified transport groups
+
+- Updated `CadToRevit/Services/PathPreview/CalculatePathApiService.cs` to accept both `independently_verified` and `verified_exact_input_cache` transport-group verification states.
+- This preserves the backend's validated minimum-disassembly route when a group reuses an exact-input cached path; no coordinate conversion, route planning, or module-layout logic was changed.
+
 Date: 2026-08-24  
 Branch: `compat/current-features-20260824`  
 Base: colleague repository commit `1cc5bb989c14f83b59b94110a114e8a366bd039f`  
