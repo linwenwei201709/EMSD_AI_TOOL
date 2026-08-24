@@ -1962,9 +1962,24 @@ namespace CadToRevit.UI.Dockable
                 //     preparation.GoalYmm);
                 // string responseBody = await Task.Run(() => CalculatePathApiService.PostCalculatePath(requestJson));
 
+                int routeModelId = ParseAhuFamilyKeyNumber(
+                    CurrentEditor != null ? CurrentEditor.SelectedEquipmentFamilyKey : string.Empty);
+                if (routeModelId <= 0 && SelectedEquipmentOption != null)
+                {
+                    routeModelId = ParseAhuFamilyKeyNumber(SelectedEquipmentOption.FamilyKey);
+                }
+                if (routeModelId <= 0)
+                {
+                    const string modelIdMessage =
+                        "The confirmed AHU model could not be resolved for route planning.";
+                    LocalizedDialogService.Error(null, modelIdMessage);
+                    DeliveryRouteHintText = modelIdMessage;
+                    return;
+                }
+
                 string requestJson = CalculatePathApiService.BuildCutAndReplanRequestJson(
                     preparation.SessionId,
-                    1,
+                    routeModelId,
                     preparation.StartXmm,
                     preparation.StartYmm,
                     preparation.GoalXmm,

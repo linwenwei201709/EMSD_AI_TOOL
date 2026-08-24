@@ -46,8 +46,9 @@ route restrictions, and failed-route red-zone visualization.
   - Sends both plural `restricted_areas` and legacy singular
     `restricted_area` for cut-and-replan compatibility.
   - Adds the current 300 mm handling/safety defaults, explicit envelope and
-    auto-goal flags, and `allow_disassembly=false` while retaining the existing
-    public builder signatures.
+    auto-goal flags. The original compatibility snapshot used
+    `allow_disassembly=false`; the 2026-08-24 follow-up below changes this to
+    `true` and attaches the validated six-module layout.
   - When the backend returns independently verified transport groups, draws
     each group's IFC path with its own dimensions instead of rendering only
     the whole-AHU fallback path.
@@ -92,3 +93,35 @@ route restrictions, and failed-route red-zone visualization.
 - The colleague's original route-planning algorithm.
 - IFC source files and Revit family definitions.
 - The original GitHub `main` branch.
+## 2026-08-24 - Restore validated modular route planning
+
+### Changed files
+
+- `CadToRevit/Services/PathPreview/CalculatePathApiService.cs`
+  - Changed `cut_and_replan` requests from `allow_disassembly: false` to
+    `allow_disassembly: true`.
+  - Added `sub_modules` to the request. The payload is built from the backend
+    workbook-backed `/api/equipment/catalog` layout for the selected
+    `original_model_id`, including module names, dimensions, heights and local
+    millimetre polygon points.
+  - If the optional catalog cannot be read or does not contain a valid six-
+    module layout, the request sends `sub_modules: []` and keeps the backend's
+    legacy three-envelope fallback instead of inventing geometry.
+  - Added diagnostic records for catalog fallback, invalid module geometry and
+    successful module attachment.
+
+- `CadToRevit/UI/Dockable/RoomDetailPaneViewModel.cs`
+  - Replaced the hard-coded route model ID `1` with the confirmed equipment's
+    family/model ID.
+  - Stops with a clear message if the confirmed equipment model cannot be
+    resolved, preventing the wrong sizing layout from being sent.
+
+### Behaviour and compatibility notes
+
+- Whole-unit routing remains the first attempt. Modular splitting is only
+  considered by the backend after the rigid whole-unit route fails.
+- The UI response handling was not changed; existing `need_cut`, group paths
+  and disassembly result rendering continue to be used.
+- This change is specifically for restoring the previously verified modular
+  route behaviour (for example, the Service Lift to AHU Room 2 case). It does
+  not alter IFC coordinate conversion, clearance values or collision rules.

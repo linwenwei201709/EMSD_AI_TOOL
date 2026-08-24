@@ -3,6 +3,7 @@ using Autodesk.Revit.UI;
 using CadToRevit.Models.Path;
 using CadToRevit.Services.Api;
 using CadToRevit.Services.Diagnostics;
+using CadToRevit.Services.Rooms.EquipmentValidation;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -124,9 +125,107 @@ namespace CadToRevit.Services.PathPreview
                    "\"safety_margin_mm\":300," +
                    "\"apply_clearance_envelope\":false," +
                    "\"auto_adjust_goal\":false," +
-                   "\"allow_disassembly\":false," +
-                   "\"handling_tool_type\":\"pallet_jack\"" +
+                   "\"allow_disassembly\":true," +
+                   "\"handling_tool_type\":\"pallet_jack\"," +
+                   "\"sub_modules\":" + BuildRouteLayoutModulesJson(originalModelId) +
                    "}";
+        }
+
+        /// <summary>
+        /// Sends the workbook-backed six-module geometry with the route request.
+        /// The route API uses this only after the whole-unit attempt fails, so
+        /// enabling disassembly does not silently replace the rigid-footprint
+        /// check.  An empty result preserves the older three-envelope fallback
+        /// when the optional catalog endpoint is unavailable.
+        /// </summary>
+        private static string BuildRouteLayoutModulesJson(int originalModelId)
+        {
+            IReadOnlyList<AhuEquipmentLayoutCatalogService.LayoutModule> layout =
+                AhuEquipmentLayoutCatalogService.TryGetLayout(originalModelId);
+            if (layout == null || layout.Count != 6)
+            {
+                DiagnosticRecorder.AppendDebug(
+                    "[CutAndReplanApi] subModulesUnavailable modelId=" +
+                    originalModelId.ToString(CultureInfo.InvariantCulture) +
+                    ", count=" + (layout == null ? "0" : layout.Count.ToString(CultureInfo.InvariantCulture)));
+                return "[]";
+            }
+
+            StringBuilder builder = new StringBuilder();
+            builder.Append('[');
+            bool wroteModule = false;
+
+            foreach (AhuEquipmentLayoutCatalogService.LayoutModule module in layout)
+            {
+                if (module == null || string.IsNullOrWhiteSpace(module.Key) ||
+                    module.LengthMillimeters <= 0 || module.WidthMillimeters <= 0 ||
+                    module.HeightMillimeters <= 0 || module.Points == null ||
+                    module.Points.Count < 4)
+                {
+                    DiagnosticRecorder.AppendDebug(
+                        "[CutAndReplanApi] subModuleSkipped modelId=" +
+                        originalModelId.ToString(CultureInfo.InvariantCulture) +
+                        ", reason=invalid_catalog_geometry");
+                    return "[]";
+                }
+
+                if (wroteModule)
+                {
+                    builder.Append(',');
+                }
+
+                builder.Append("{\"module\":\"")
+                    .Append(EscapeJson(module.Key))
+                    .Append("\",\"name\":\"")
+                    .Append(EscapeJson(module.Name))
+                    .Append("\",\"length_mm\":")
+                    .Append(module.LengthMillimeters.ToString(CultureInfo.InvariantCulture))
+                    .Append(",\"width_mm\":")
+                    .Append(module.WidthMillimeters.ToString(CultureInfo.InvariantCulture))
+                    .Append(",\"height_mm\":")
+                    .Append(module.HeightMillimeters.ToString(CultureInfo.InvariantCulture))
+                    .Append(",\"points\":[");
+
+                bool wrotePoint = false;
+                foreach (double[] point in module.Points)
+                {
+                    if (point == null || point.Length < 2)
+                    {
+                        continue;
+                    }
+
+                    if (wrotePoint)
+                    {
+                        builder.Append(',');
+                    }
+
+                    builder.Append('[')
+                        .Append(point[0].ToString("0.###", CultureInfo.InvariantCulture))
+                        .Append(',')
+                        .Append(point[1].ToString("0.###", CultureInfo.InvariantCulture))
+                        .Append(']');
+                    wrotePoint = true;
+                }
+
+                if (!wrotePoint)
+                {
+                    DiagnosticRecorder.AppendDebug(
+                        "[CutAndReplanApi] subModuleSkipped modelId=" +
+                        originalModelId.ToString(CultureInfo.InvariantCulture) +
+                        ", module=" + module.Key + ", reason=no_points");
+                    return "[]";
+                }
+
+                builder.Append("]}");
+                wroteModule = true;
+            }
+
+            builder.Append(']');
+            DiagnosticRecorder.AppendDebug(
+                "[CutAndReplanApi] subModulesAttached modelId=" +
+                originalModelId.ToString(CultureInfo.InvariantCulture) +
+                ", count=6");
+            return builder.ToString();
         }
 
         private static string BuildRestrictedAreaJson(IList<RestrictedAreaRequestItem> restrictedAreas)
