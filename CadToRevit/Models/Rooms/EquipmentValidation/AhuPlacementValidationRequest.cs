@@ -41,13 +41,25 @@ namespace CadToRevit.Models.Rooms.EquipmentValidation
         // The returned orientation_deg is then applied by Revit placement.
         public double? Orientation { get; set; }
 
+        // Optional room-fit contract extensions. These are additive so the
+        // existing colleague UI/request callers remain source-compatible.
+        public string EvaluationMode { get; set; }
+
         public bool UseMaintenanceSpace { get; set; } = true;
+
+        // Physical fit and maintenance clearance are reported separately.
+        public bool EvaluateMaintenanceSpace { get; set; } = true;
 
         // Optional AHU-local side that must face the room door.
         // Values sent to Python are: top / bottom / left / right.
         // This is derived from Maintenance2 by finding the single M row
         // marked as Door Side; M1/M2/M3/M4 itself is not treated as a direction.
         public string DoorFacingSide { get; set; }
+
+        public List<string> DoorFacingSideOptions { get; set; } = new List<string>();
+
+        // IFC-mm direction vector parallel to the selected room door.
+        public double[] DoorDirection { get; set; }
 
         // Optional AHU-local sides that are configured to sit against room walls.
         // Values sent to Python are: top / bottom / left / right.
@@ -68,6 +80,10 @@ namespace CadToRevit.Models.Rooms.EquipmentValidation
         // UI grid gaps are intentionally treated as 0 mm.
         public List<AhuPlacementSubModuleRequest> SubModules { get; set; } =
             new List<AhuPlacementSubModuleRequest>();
+
+        // Same DTO used by the route API. Room-fit callers may leave this empty.
+        public List<CadToRevit.Services.PathPreview.RestrictedAreaRequestItem> RestrictedAreas { get; set; } =
+            new List<CadToRevit.Services.PathPreview.RestrictedAreaRequestItem>();
     }
 
     public sealed class AhuPlacementMaintenanceSpaceRequest

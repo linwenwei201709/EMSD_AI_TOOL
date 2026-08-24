@@ -229,6 +229,12 @@ namespace CadToRevit.UI.Dockable
         public double PlacementXmm { get; set; }
 
         public double PlacementYmm { get; set; }
+
+        // IFC-mm direction vector parallel to the selected room door.
+        public double[] DoorDirection { get; set; }
+
+        public List<RestrictedAreaRequestItem> RestrictedAreas { get; set; } =
+            new List<RestrictedAreaRequestItem>();
     }
 
     public sealed class RoomRecognitionPaneState

@@ -41,6 +41,7 @@
     <Error Condition="!Exists('$(AutoCADSdkIncDir)\AcMgd.dll')" Text="Missing $(AutoCADSdkIncDir)\AcMgd.dll. Verify the target ObjectARX SDK setup." />
   </Target>
   <ItemGroup>
+    <Compile Include="Services\Api\IfcMillimeterCoordinateAdapter.cs" />
     <Reference Include="AcCoreMgd, Version=23.1.0.0, Culture=neutral, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\EMSDRevitPlugs文档相关\AutoCAD_Mgd_DLLs\AcCoreMgd.dll</HintPath>
@@ -204,6 +205,7 @@
     <Compile Include="Models\Cad\CadDataset.cs" />
     <Compile Include="Models\Path\PathPoint3D.cs" />
     <Compile Include="Models\Path\PathPolyline.cs" />
+    <Compile Include="Models\Path\RedZonePoint3D.cs" />
     <Compile Include="Models\Rooms\ConnectivitySizeOptionsModels.cs" />
     <Compile Include="Models\Rooms\DeliveryRoutes\DeliveryRouteRecordDto.cs" />
     <Compile Include="Models\Rooms\DeliveryRoutes\DeliveryRouteStorePayload.cs" />
@@ -408,6 +410,7 @@
     <Compile Include="Services\Rooms\Manual\ManualRoomStorageService.cs" />
     <Compile Include="Services\Rooms\Manual\ManualRoomValidationRoomInfo.cs" />
     <Compile Include="Services\Rooms\EquipmentValidation\AhuPlacementValidationService.cs" />
+    <Compile Include="Services\Rooms\EquipmentValidation\AhuEquipmentLayoutCatalogService.cs" />
     <Compile Include="Services\ExportDrawing\ExportDrawingModels.cs" />
     <Compile Include="Services\ExportDrawing\ExportDrawingImageService.cs" />
     <Compile Include="Services\ExportDrawing\ExportDrawingPdfService.cs" />

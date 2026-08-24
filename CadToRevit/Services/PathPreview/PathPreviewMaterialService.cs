@@ -31,6 +31,15 @@ namespace CadToRevit.Services.PathPreview
             return GetOrCreateMaterialId(doc, PathPreviewConstants.LabelMaterialName, PathPreviewConstants.LabelColor, PathPreviewConstants.LabelTransparency);
         }
 
+        internal static ElementId GetOrCreateRedZoneMaterialId(Document doc)
+        {
+            return GetOrCreateMaterialId(
+                doc,
+                "EMSD_PATHVIS_MAT_RED_ZONE",
+                PathPreviewConstants.RedZoneColor,
+                PathPreviewConstants.RedZoneTransparency);
+        }
+
         private static ElementId GetOrCreateMaterialId(Document doc, string name, Color color, int transparency)
         {
             if (doc == null || string.IsNullOrWhiteSpace(name))
