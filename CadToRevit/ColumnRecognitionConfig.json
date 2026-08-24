@@ -1,0 +1,77 @@
+{
+  "version": "10.5",
+  "defaults": {
+    "cluster": {
+      "algorithm": "MidpointBFS",
+      "clusterTolMm": 350,
+      "endpointTolMm": 30,
+      "gapTolMm": 50,
+      "minGroupSegments": 8
+    },
+    "sizeFilter": {
+      "minSizeMm": 200,
+      "maxSizeMm": 1200,
+      "minAreaM2": 0.04,
+      "maxAspectRatio": 4.0,
+      "minFillRatio": 0.25
+    },
+    "lineFilter": {
+      "enable": true,
+      "maxSegmentLengthMm": 2000
+    },
+    "merge": {
+      "enable": true,
+      "mergeTolMm": 300,
+      "strategy": "KeepBest",
+      "dedupePlacedTolMm": 150
+    },
+    "score": {
+      "areaWeight": 1.0,
+      "segmentCountWeight": 0.6,
+      "rectnessWeight": 0.8,
+      "longLinePenalty": 1.2
+    },
+    "attachToWall": {
+      "enable": true,
+      "snapTolMm": 250,
+      "target": "WallCenterline",
+      "allowOverlap": false
+    },
+    "debug": {
+      "drawCandidates": false,
+      "drawClusterId": false,
+      "drawRejectReason": false,
+      "exportReport": true
+    },
+    "irregular": {
+      "enable": true,
+      "maxSizeMm": 1800.0,
+      "requireClosedLoop": true,
+      "minAreaM2": 0.03,
+      "minGroupSegments": 4,
+      "maxAreaM2": 2.0,
+      "minFillRatio": 0.15,
+      "maxAspectRatio": 6.0,
+      "enableHelperEdges": true,
+      "helperLayerKeywords": ["WALL", "A-WALL", "S-WALL", "E-WALL"],
+      "gapTolMm": 200.0,
+      "fragmentMergeTolMm": 600.0,
+      "maxVirtualEdgeLenMm": 300.0,
+      "maxHelperEdgeLenMm": 1500.0,
+      "maxHelperEdges": 2,
+      "maxFragmentsPerGroup": 3
+    }
+  },
+  "overridesByLayer": {
+    "S_RC_COL": {
+      "cluster": {
+        "clusterTolMm": 420,
+        "minGroupSegments": 8
+      },
+      "attachToWall": {
+        "enable": true,
+        "snapTolMm": 250
+      }
+    }
+  }
+}

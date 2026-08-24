@@ -1,0 +1,581 @@
+using Autodesk.Revit.Attributes;
+using Autodesk.Revit.DB;
+using Autodesk.Revit.UI;
+using CadToRevit.Infrastructure.Localization;
+using CadToRevit.Services;
+using CadToRevit.Services.Dwg;
+using System;
+using System.Globalization;
+using System.Net.Http;
+using System.Text;
+using System.Linq;
+using WinForms = System.Windows.Forms;
+
+namespace CadToRevit.Commands
+{
+    [Transaction(TransactionMode.Manual)]
+    public class ProjectInitializationCommand : IExternalCommand
+    {
+        private const string ProjectInitUrl = "http://127.0.0.1:8000/api/init";
+
+        public Result Execute(
+            ExternalCommandData commandData,
+            ref string message,
+            ElementSet elements)
+        {
+            UIDocument uiDoc = commandData.Application.ActiveUIDocument;
+            Document doc = uiDoc == null ? null : uiDoc.Document;
+
+            using (ProjectInitializationForm form = new ProjectInitializationForm(
+                ResolveProjectName(doc),
+                ResolveProjectIdentifier(),
+                ResolveCurrentDwgPath(uiDoc, doc)))
+            {
+                if (form.ShowDialog() != WinForms.DialogResult.OK)
+                {
+                    return Result.Cancelled;
+                }
+
+                try
+                {
+                    string responseText = PostProjectInitialization(form.BuildRequestJson());
+                    ShowResponseDialog(responseText);
+                    return Result.Succeeded;
+                }
+                catch (Exception ex)
+                {
+                    ShowErrorDialog(ex.Message);
+                    return Result.Failed;
+                }
+            }
+        }
+
+        private static string PostProjectInitialization(string requestJson)
+        {
+            using (HttpClient client = new HttpClient())
+            using (StringContent content = new StringContent(requestJson, Encoding.UTF8, "application/json"))
+            using (HttpResponseMessage response = client.PostAsync(ProjectInitUrl, content).GetAwaiter().GetResult())
+            {
+                string responseText = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new InvalidOperationException(
+                        "HTTP " + ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture) +
+                        ": " + responseText);
+                }
+
+                return string.IsNullOrWhiteSpace(responseText) ? "(empty)" : responseText;
+            }
+        }
+
+        private static void ShowResponseDialog(string responseText)
+        {
+            TaskDialog dialog = new TaskDialog(Loc.T("Dialog.ProjectInit.Title"));
+            dialog.MainInstruction = Loc.T("Dialog.ProjectInit.ResultTitle");
+            dialog.MainContent = BuildInitResultDisplayText(responseText);
+            dialog.ExpandedContent = responseText;
+            dialog.CommonButtons = TaskDialogCommonButtons.Close;
+            dialog.Show();
+        }
+
+        private static void ShowErrorDialog(string errorText)
+        {
+            TaskDialog dialog = new TaskDialog(Loc.T("Dialog.ProjectInit.Title"));
+            dialog.MainInstruction = Loc.T("Dialog.ProjectInit.ErrorTitle");
+            dialog.MainContent = Loc.T("Dialog.ProjectInit.ErrorSummary");
+            dialog.ExpandedContent = errorText;
+            dialog.CommonButtons = TaskDialogCommonButtons.Close;
+            dialog.Show();
+        }
+
+        private static string BuildInitResultDisplayText(string responseText)
+        {
+            string[] propertyNames = new[]
+            {
+                "status",
+                "session_id",
+                "map_bounds",
+                "grid_shape",
+                "physical_size",
+                "resolution_mm"
+            };
+
+            StringBuilder builder = new StringBuilder();
+            foreach (string propertyName in propertyNames)
+            {
+                if (builder.Length > 0)
+                {
+                    builder.AppendLine();
+                }
+
+                builder.Append(propertyName);
+                builder.Append(": ");
+                builder.Append(ExtractTopLevelJsonValue(responseText, propertyName) ?? "(missing)");
+            }
+
+            return builder.ToString();
+        }
+
+        private static string ExtractTopLevelJsonValue(string json, string propertyName)
+        {
+            if (string.IsNullOrWhiteSpace(json) || string.IsNullOrWhiteSpace(propertyName))
+            {
+                return null;
+            }
+
+            string propertyToken = "\"" + propertyName + "\"";
+            int propertyIndex = json.IndexOf(propertyToken, StringComparison.Ordinal);
+            if (propertyIndex < 0)
+            {
+                return null;
+            }
+
+            int colonIndex = json.IndexOf(':', propertyIndex + propertyToken.Length);
+            if (colonIndex < 0)
+            {
+                return null;
+            }
+
+            int valueStart = SkipJsonWhitespace(json, colonIndex + 1);
+            if (valueStart >= json.Length)
+            {
+                return null;
+            }
+
+            int valueEnd = FindJsonValueEnd(json, valueStart);
+            if (valueEnd <= valueStart)
+            {
+                return null;
+            }
+
+            return json.Substring(valueStart, valueEnd - valueStart).Trim();
+        }
+
+        private static int SkipJsonWhitespace(string text, int startIndex)
+        {
+            int index = startIndex;
+            while (index < text.Length && char.IsWhiteSpace(text[index]))
+            {
+                index++;
+            }
+
+            return index;
+        }
+
+        private static int FindJsonValueEnd(string json, int startIndex)
+        {
+            char firstChar = json[startIndex];
+            if (firstChar == '"')
+            {
+                return FindJsonStringEnd(json, startIndex);
+            }
+
+            if (firstChar == '{' || firstChar == '[')
+            {
+                return FindJsonCompositeEnd(json, startIndex);
+            }
+
+            int index = startIndex;
+            while (index < json.Length)
+            {
+                char current = json[index];
+                if (current == ',' || current == '}' || current == ']')
+                {
+                    break;
+                }
+
+                index++;
+            }
+
+            return index;
+        }
+
+        private static int FindJsonStringEnd(string json, int startIndex)
+        {
+            bool escaped = false;
+            for (int index = startIndex + 1; index < json.Length; index++)
+            {
+                char current = json[index];
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (current == '\\')
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (current == '"')
+                {
+                    return index + 1;
+                }
+            }
+
+            return json.Length;
+        }
+
+        private static int FindJsonCompositeEnd(string json, int startIndex)
+        {
+            int depth = 0;
+            bool inString = false;
+            bool escaped = false;
+
+            for (int index = startIndex; index < json.Length; index++)
+            {
+                char current = json[index];
+                if (inString)
+                {
+                    if (escaped)
+                    {
+                        escaped = false;
+                        continue;
+                    }
+
+                    if (current == '\\')
+                    {
+                        escaped = true;
+                        continue;
+                    }
+
+                    if (current == '"')
+                    {
+                        inString = false;
+                    }
+
+                    continue;
+                }
+
+                if (current == '"')
+                {
+                    inString = true;
+                    continue;
+                }
+
+                if (current == '{' || current == '[')
+                {
+                    depth++;
+                    continue;
+                }
+
+                if (current == '}' || current == ']')
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        return index + 1;
+                    }
+                }
+            }
+
+            return json.Length;
+        }
+
+        private static string ResolveProjectName(Document doc)
+        {
+            if (doc == null)
+            {
+                return string.Empty;
+            }
+
+            string projectName = null;
+            try
+            {
+                projectName = doc.ProjectInformation == null ? null : doc.ProjectInformation.Name;
+            }
+            catch
+            {
+                projectName = null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(projectName))
+            {
+                return projectName.Trim();
+            }
+
+            return (doc.Title ?? string.Empty).Trim();
+        }
+
+        private static string ResolveProjectIdentifier()
+        {
+            // Use a 32-character GUID string without separators.
+            return Guid.NewGuid().ToString("N");
+        }
+
+        private static string ResolveCurrentDwgPath(UIDocument uiDoc, Document doc)
+        {
+            ImportInstance importInstance = GetSelectedImportInstance(uiDoc) ?? GetFirstImportInstance(doc);
+            if (importInstance == null)
+            {
+                return string.Empty;
+            }
+
+            return DwgPathResolver.TryGetDwgPath(doc, importInstance) ?? string.Empty;
+        }
+
+        private static ImportInstance GetSelectedImportInstance(UIDocument uiDoc)
+        {
+            if (uiDoc == null)
+            {
+                return null;
+            }
+
+            foreach (ElementId id in uiDoc.Selection.GetElementIds())
+            {
+                ImportInstance instance = uiDoc.Document.GetElement(id) as ImportInstance;
+                if (instance != null)
+                {
+                    return instance;
+                }
+            }
+
+            return null;
+        }
+
+        private static ImportInstance GetFirstImportInstance(Document doc)
+        {
+            if (doc == null)
+            {
+                return null;
+            }
+
+            return DwgImportService.GetLinkedImportInstances(doc).FirstOrDefault();
+        }
+
+        private sealed class ProjectInitializationForm : WinForms.Form
+        {
+            private readonly WinForms.TextBox _headroomTextBox = new WinForms.TextBox();
+            private readonly WinForms.TextBox _doorWidthToleranceTextBox = new WinForms.TextBox();
+            private readonly WinForms.TextBox _dwgFilePathTextBox = new WinForms.TextBox();
+            private readonly WinForms.TextBox _projectNameTextBox = new WinForms.TextBox();
+            private readonly WinForms.TextBox _projectIdentifierTextBox = new WinForms.TextBox();
+            private readonly WinForms.Button _okButton = new WinForms.Button();
+            private readonly WinForms.Button _closeButton = new WinForms.Button();
+
+            internal ProjectInitializationForm(string projectName, string projectIdentifier, string dwgFilePath)
+            {
+                Text = Loc.T("Dialog.ProjectInit.Title");
+                StartPosition = WinForms.FormStartPosition.CenterScreen;
+                FormBorderStyle = WinForms.FormBorderStyle.FixedDialog;
+                MaximizeBox = false;
+                MinimizeBox = false;
+                ShowInTaskbar = false;
+                AutoScaleMode = WinForms.AutoScaleMode.Dpi;
+                ClientSize = new System.Drawing.Size(760, 470);
+                Padding = new WinForms.Padding(18, 16, 18, 16);
+
+                SuspendLayout();
+
+                int labelLeft = 22;
+                int inputLeft = 22;
+                int inputWidth = ClientSize.Width - 44;
+                int top = 24;
+                int inputTopOffset = 30;
+                int rowGap = 66;
+                int inputHeight = 30;
+                int buttonWidth = 96;
+                int buttonHeight = 34;
+                int buttonTop = ClientSize.Height - buttonHeight - 18;
+
+                WinForms.Label headroomLabel = CreateLabel(Loc.T("Dialog.ProjectInit.HeadroomHeight"), labelLeft, top);
+                ConfigureTextBox(_headroomTextBox, inputLeft, top + inputTopOffset, inputWidth, inputHeight);
+                _headroomTextBox.Text = "2200";
+                _headroomTextBox.Font = new System.Drawing.Font(_headroomTextBox.Font.FontFamily, 12F);
+
+                top += rowGap;
+                WinForms.Label toleranceLabel = CreateLabel(Loc.T("Dialog.ProjectInit.DoorWidthToleranceMm"), labelLeft, top);
+                ConfigureTextBox(_doorWidthToleranceTextBox, inputLeft, top + inputTopOffset, inputWidth, inputHeight);
+                _doorWidthToleranceTextBox.Text = "0";
+                _doorWidthToleranceTextBox.Font = new System.Drawing.Font(_doorWidthToleranceTextBox.Font.FontFamily, 12F);
+
+                top += rowGap;
+                WinForms.Label dwgPathLabel = CreateLabel(Loc.T("Dialog.ProjectInit.DwgFilePath"), labelLeft, top);
+                ConfigureTextBox(_dwgFilePathTextBox, inputLeft, top + inputTopOffset, inputWidth, inputHeight);
+                _dwgFilePathTextBox.Text = dwgFilePath ?? string.Empty;
+                _dwgFilePathTextBox.ReadOnly = true;
+
+                top += rowGap;
+                WinForms.Label projectNameLabel = CreateLabel(Loc.T("Dialog.ProjectInit.ProjectName"), labelLeft, top);
+                ConfigureTextBox(_projectNameTextBox, inputLeft, top + inputTopOffset, inputWidth, inputHeight);
+                _projectNameTextBox.Text = projectName ?? string.Empty;
+
+                top += rowGap;
+                WinForms.Label projectIdentifierLabel = CreateLabel(Loc.T("Dialog.ProjectInit.ProjectIdentifier"), labelLeft, top);
+                ConfigureTextBox(_projectIdentifierTextBox, inputLeft, top + inputTopOffset, inputWidth, inputHeight);
+                _projectIdentifierTextBox.Text = projectIdentifier ?? string.Empty;
+
+                _okButton.Text = Loc.T("Dialog.ProjectInit.Ok");
+                _okButton.Left = ClientSize.Width - buttonWidth * 2 - 16;
+                _okButton.Top = buttonTop;
+                _okButton.Width = buttonWidth;
+                _okButton.Height = buttonHeight;
+                _okButton.Anchor = WinForms.AnchorStyles.Bottom | WinForms.AnchorStyles.Right;
+                _okButton.DialogResult = WinForms.DialogResult.OK;
+                _okButton.Click += OnConfirmClick;
+
+                _closeButton.Text = Loc.T("Dialog.ProjectInit.Close");
+                _closeButton.Left = ClientSize.Width - buttonWidth - 10;
+                _closeButton.Top = buttonTop;
+                _closeButton.Width = buttonWidth;
+                _closeButton.Height = buttonHeight;
+                _closeButton.Anchor = WinForms.AnchorStyles.Bottom | WinForms.AnchorStyles.Right;
+                _closeButton.DialogResult = WinForms.DialogResult.Cancel;
+
+                AcceptButton = _okButton;
+                CancelButton = _closeButton;
+
+                Controls.Add(headroomLabel);
+                Controls.Add(_headroomTextBox);
+                Controls.Add(toleranceLabel);
+                Controls.Add(_doorWidthToleranceTextBox);
+                Controls.Add(dwgPathLabel);
+                Controls.Add(_dwgFilePathTextBox);
+                Controls.Add(projectNameLabel);
+                Controls.Add(_projectNameTextBox);
+                Controls.Add(projectIdentifierLabel);
+                Controls.Add(_projectIdentifierTextBox);
+                Controls.Add(_okButton);
+                Controls.Add(_closeButton);
+
+                ResumeLayout(false);
+                PerformLayout();
+            }
+
+            private static void ConfigureTextBox(WinForms.TextBox textBox, int left, int top, int width, int height)
+            {
+                textBox.Left = left;
+                textBox.Top = top;
+                textBox.Width = width;
+                textBox.Height = height;
+                textBox.Margin = new WinForms.Padding(0);
+                textBox.Anchor = WinForms.AnchorStyles.Top | WinForms.AnchorStyles.Left | WinForms.AnchorStyles.Right;
+            }
+
+            private static WinForms.Label CreateLabel(string text, int left, int top)
+            {
+                WinForms.Label label = new WinForms.Label();
+                label.AutoSize = true;
+                label.Left = left;
+                label.Top = top;
+                label.Margin = new WinForms.Padding(0);
+                label.Font = new System.Drawing.Font(label.Font, System.Drawing.FontStyle.Regular);
+                label.Text = text;
+                return label;
+            }
+
+            internal string HeadroomHeightText
+            {
+                get { return _headroomTextBox.Text.Trim(); }
+            }
+
+            internal string DoorWidthToleranceMmText
+            {
+                get { return _doorWidthToleranceTextBox.Text.Trim(); }
+            }
+
+            internal string DwgFilePathText
+            {
+                get { return _dwgFilePathTextBox.Text.Trim(); }
+            }
+
+            internal string ProjectNameText
+            {
+                get { return _projectNameTextBox.Text.Trim(); }
+            }
+
+            internal string ProjectIdentifierText
+            {
+                get { return _projectIdentifierTextBox.Text.Trim(); }
+            }
+
+            internal string BuildRequestJson()
+            {
+                string ifcFilePath = @"D:\EMSDRevitPlugsÎÄµµÏà¹Ø\dist\dist\Project4.ifc";
+
+                return "{" +
+                       "\"headroom_height\":" + HeadroomHeightText + "," +
+                       "\"door_tolerance\":" + DoorWidthToleranceMmText + "," +
+                       "\"project_id\":\"" + EscapeJson(ProjectIdentifierText) + "\"," +
+                       "\"door_positions\":[]," +
+                       "\"ifc_file_path\":\"" + EscapeJson(ifcFilePath) + "\"" +
+                       "}";
+            }
+
+            private static string EscapeJson(string value)
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    return string.Empty;
+                }
+
+                return value
+                    .Replace("\\", "\\\\")
+                    .Replace("\"", "\\\"");
+            }
+
+            private void OnConfirmClick(object sender, EventArgs e)
+            {
+                double headroomHeight;
+                bool isValid = double.TryParse(
+                    HeadroomHeightText,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out headroomHeight);
+
+                if (!isValid)
+                {
+                    isValid = double.TryParse(
+                        HeadroomHeightText,
+                        NumberStyles.Float,
+                        CultureInfo.CurrentCulture,
+                        out headroomHeight);
+                }
+
+                if (!isValid)
+                {
+                    WinForms.MessageBox.Show(
+                        this,
+                        Loc.T("Dialog.ProjectInit.InvalidHeadroomHeight"),
+                        Loc.T("Dialog.ProjectInit.Title"),
+                        WinForms.MessageBoxButtons.OK,
+                        WinForms.MessageBoxIcon.Warning);
+                    DialogResult = WinForms.DialogResult.None;
+                    return;
+                }
+
+                double doorWidthTolerance;
+                bool toleranceValid = double.TryParse(
+                    DoorWidthToleranceMmText,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out doorWidthTolerance);
+
+                if (!toleranceValid)
+                {
+                    toleranceValid = double.TryParse(
+                        DoorWidthToleranceMmText,
+                        NumberStyles.Float,
+                        CultureInfo.CurrentCulture,
+                        out doorWidthTolerance);
+                }
+
+                if (!toleranceValid)
+                {
+                    WinForms.MessageBox.Show(
+                        this,
+                        Loc.T("Dialog.ProjectInit.InvalidDoorWidthToleranceMm"),
+                        Loc.T("Dialog.ProjectInit.Title"),
+                        WinForms.MessageBoxButtons.OK,
+                        WinForms.MessageBoxIcon.Warning);
+                    DialogResult = WinForms.DialogResult.None;
+                    return;
+                }
+
+                _headroomTextBox.Text = headroomHeight.ToString("0.###", CultureInfo.InvariantCulture);
+                _doorWidthToleranceTextBox.Text = doorWidthTolerance.ToString("0.###", CultureInfo.InvariantCulture);
+            }
+        }
+    }
+}

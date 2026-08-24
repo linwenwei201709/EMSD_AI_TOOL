@@ -1,0 +1,8 @@
+{
+  "MaxSegmentsPreview": 3000,
+  "MaxSegmentsHardStop": 8000,
+  "MaxEstimatedWalls": 2000,
+  "DefaultMinLengthMm": 200.0,
+  "HighRiskMinLengthMm": 500.0,
+  "BatchSize": 200
+}

@@ -1,0 +1,1350 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Common.OK" xml:space="preserve">
+    <value>確定</value>
+  </data>
+  <data name="Common.Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Common.Close" xml:space="preserve">
+    <value>關閉</value>
+  </data>
+  <data name="Common.Yes" xml:space="preserve">
+    <value>是</value>
+  </data>
+  <data name="Common.No" xml:space="preserve">
+    <value>否</value>
+  </data>
+  <data name="Common.Save" xml:space="preserve">
+    <value>儲存</value>
+  </data>
+  <data name="Common.Preview" xml:space="preserve">
+    <value>預覽</value>
+  </data>
+  <data name="Common.Export" xml:space="preserve">
+    <value>匯出</value>
+  </data>
+  <data name="Common.Import" xml:space="preserve">
+    <value>匯入</value>
+  </data>
+  <data name="Common.Delete" xml:space="preserve">
+    <value>刪除</value>
+  </data>
+  <data name="Common.Apply" xml:space="preserve">
+    <value>套用</value>
+  </data>
+  <data name="Common.Reset" xml:space="preserve">
+    <value>重設</value>
+  </data>
+  <data name="Common.Enable" xml:space="preserve">
+    <value>啟用</value>
+  </data>
+  <data name="Common.Disable" xml:space="preserve">
+    <value>停用</value>
+  </data>
+  <data name="Common.Search" xml:space="preserve">
+    <value>搜尋</value>
+  </data>
+  <data name="Common.Browse" xml:space="preserve">
+    <value>瀏覽</value>
+  </data>
+  <data name="Common.Level" xml:space="preserve">
+    <value>標高</value>
+  </data>
+  <data name="Common.Unit" xml:space="preserve">
+    <value>單位</value>
+  </data>
+  <data name="Common.Status" xml:space="preserve">
+    <value>狀態</value>
+  </data>
+  <data name="Common.Selected" xml:space="preserve">
+    <value>已選</value>
+  </data>
+  <data name="Common.Ignore" xml:space="preserve">
+    <value>忽略</value>
+  </data>
+  <data name="Common.Layer" xml:space="preserve">
+    <value>圖層</value>
+  </data>
+  <data name="Common.Category" xml:space="preserve">
+    <value>類別</value>
+  </data>
+  <data name="Common.FamilyType" xml:space="preserve">
+    <value>族類型</value>
+  </data>
+  <data name="Common.Name" xml:space="preserve">
+    <value>名稱</value>
+  </data>
+  <data name="Ribbon.Tab.CadToRevit" xml:space="preserve">
+    <value>EMSD AI Tool</value>
+  </data>
+  <data name="Ribbon.Panel.Tools" xml:space="preserve">
+    <value>工具</value>
+  </data>
+  <data name="Ribbon.Panel.PathTools" xml:space="preserve">
+    <value>路徑工具</value>
+  </data>
+  <data name="Ribbon.Panel.IntegrationTools" xml:space="preserve">
+    <value>介面工具</value>
+  </data>
+  <data name="Ribbon.Panel.TestTools" xml:space="preserve">
+    <value>房間工具</value>
+  </data>
+  <data name="Ribbon.Panel.Config" xml:space="preserve">
+    <value>配置</value>
+  </data>
+  <data name="Ribbon.Panel.Part3Tools" xml:space="preserve">
+    <value>Part3 Tools</value>
+  </data>
+  <data name="Ribbon.Button.ImportDwg" xml:space="preserve">
+    <value>匯入DWG</value>
+  </data>
+  <data name="Ribbon.Button.RvtModelImport" xml:space="preserve">
+    <value>RVT模型導入</value>
+  </data>
+  <data name="Ribbon.Button.RvtModelImport.Tooltip" xml:space="preserve">
+    <value>開啟 RVT 模型用於 Part 3 房間識別和路徑規劃。</value>
+  </data>
+  <data name="Ribbon.Button.RoutePlanner" xml:space="preserve">
+    <value>Route Planner</value>
+  </data>
+  <data name="Ribbon.Button.RoutePlanner.Tooltip" xml:space="preserve">
+    <value>開啟路徑規劃工具。</value>
+  </data>
+  <data name="Ribbon.Button.RefreshDwg" xml:space="preserve">
+    <value>刷新DWG</value>
+  </data>
+  <data name="Ribbon.Button.MainPanel" xml:space="preserve">
+    <value>主面板</value>
+  </data>
+  <data name="Ribbon.Button.GlobalSettings" xml:space="preserve">
+    <value>全域配置</value>
+  </data>
+  <data name="Ribbon.Button.GlobalSettings.Tooltip" xml:space="preserve">
+    <value>開啟專案層級的全域配置視窗。</value>
+  </data>
+  <data name="GlobalSettings.Title" xml:space="preserve">
+    <value>全域配置</value>
+  </data>
+  <data name="GlobalSettings.Tab.General" xml:space="preserve">
+    <value>通用</value>
+  </data>
+  <data name="GlobalSettings.Tab.Walls" xml:space="preserve">
+    <value>牆</value>
+  </data>
+  <data name="GlobalSettings.Tab.Doors" xml:space="preserve">
+    <value>門</value>
+  </data>
+  <data name="GlobalSettings.Tab.Rooms" xml:space="preserve">
+    <value>房間</value>
+  </data>
+  <data name="GlobalSettings.SafeMode" xml:space="preserve">
+    <value>安全模式</value>
+  </data>
+  <data name="GlobalSettings.AutoJoinWalls" xml:space="preserve">
+    <value>自動 Join 牆</value>
+  </data>
+  <data name="GlobalSettings.HeadRoom" xml:space="preserve">
+    <value>淨高(mm)</value>
+  </data>
+  <data name="GlobalSettings.UseGlobalWallHeight" xml:space="preserve">
+    <value>以全域牆高度為準</value>
+  </data>
+  <data name="GlobalSettings.GlobalWallHeight" xml:space="preserve">
+    <value>全域牆高度(mm)</value>
+  </data>
+  <data name="GlobalSettings.UseGlobalDoorHeight" xml:space="preserve">
+    <value>以全域門高度為準</value>
+  </data>
+  <data name="GlobalSettings.GlobalDoorHeight" xml:space="preserve">
+    <value>全域門高度(mm)</value>
+  </data>
+  <data name="GlobalSettings.UseGlobalDoorSillHeight" xml:space="preserve">
+    <value>以全域門檻高度為準</value>
+  </data>
+  <data name="GlobalSettings.GlobalDoorSillHeight" xml:space="preserve">
+    <value>全域門檻高度(mm)</value>
+  </data>
+  <data name="GlobalSettings.RecognitionWindow" xml:space="preserve">
+    <value>識別視窗(m)</value>
+  </data>
+  <data name="GlobalSettings.TargetKeywords" xml:space="preserve">
+    <value>目標關鍵詞</value>
+  </data>
+  <data name="GlobalSettings.DoorGapMax" xml:space="preserve">
+    <value>房門最大缺口(mm)</value>
+  </data>
+  <data name="GlobalSettings.SmallGapPatch" xml:space="preserve">
+    <value>房間小缺口補齊(mm)</value>
+  </data>
+  <data name="GlobalSettings.Validation.Positive" xml:space="preserve">
+    <value>{0} 必須為大於 0 的數字。</value>
+  </data>
+  <data name="GlobalSettings.Validation.NonNegative" xml:space="preserve">
+    <value>{0} 必須為大於等於 0 的數字。</value>
+  </data>
+  <data name="GlobalSettings.NoActiveDocument" xml:space="preserve">
+    <value>目前沒有活動文件。</value>
+  </data>
+  <data name="FamilyLibrary.Title" xml:space="preserve">
+    <value>族庫管理</value>
+  </data>
+  <data name="FamilyLibrary.Subtitle" xml:space="preserve">
+    <value>管理 AHU 族檔案，以及房間詳情面板使用的 catalog.json 中繼資料。</value>
+  </data>
+  <data name="FamilyLibrary.Button.Add" xml:space="preserve">
+    <value>新增族</value>
+  </data>
+  <data name="FamilyLibrary.Button.Delete" xml:space="preserve">
+    <value>刪除</value>
+  </data>
+  <data name="FamilyLibrary.Button.Refresh" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <data name="FamilyLibrary.Editor.Title" xml:space="preserve">
+    <value>編輯目前族</value>
+  </data>
+  <data name="FamilyLibrary.Column.DisplayName" xml:space="preserve">
+    <value>顯示名稱</value>
+  </data>
+  <data name="FamilyLibrary.Column.FileName" xml:space="preserve">
+    <value>檔名</value>
+  </data>
+  <data name="FamilyLibrary.Column.Enabled" xml:space="preserve">
+    <value>啟用</value>
+  </data>
+  <data name="FamilyLibrary.Column.SortOrder" xml:space="preserve">
+    <value>排序</value>
+  </data>
+  <data name="FamilyLibrary.Column.Description" xml:space="preserve">
+    <value>說明</value>
+  </data>
+  <data name="FamilyLibrary.Field.DisplayName" xml:space="preserve">
+    <value>顯示名稱</value>
+  </data>
+  <data name="FamilyLibrary.Field.FileName" xml:space="preserve">
+    <value>檔名</value>
+  </data>
+  <data name="FamilyLibrary.Field.Enabled" xml:space="preserve">
+    <value>啟用</value>
+  </data>
+  <data name="FamilyLibrary.Field.SortOrder" xml:space="preserve">
+    <value>排序</value>
+  </data>
+  <data name="FamilyLibrary.Field.Description" xml:space="preserve">
+    <value>說明</value>
+  </data>
+  <data name="FamilyLibrary.Field.CatalogPath" xml:space="preserve">
+    <value>目錄路徑</value>
+  </data>
+  <data name="FamilyLibrary.OpenFile.Filter" xml:space="preserve">
+    <value>Revit 族檔案 (*.rfa)|*.rfa</value>
+  </data>
+  <data name="FamilyLibrary.Delete.SelectionRequired" xml:space="preserve">
+    <value>請先選取一筆族記錄。</value>
+  </data>
+  <data name="FamilyLibrary.Delete.Confirm" xml:space="preserve">
+    <value>現在刪除族庫中的「{0}」嗎？對應的 .rfa 實體檔案也會立即刪除。</value>
+  </data>
+  <data name="FamilyLibrary.Delete.RemovedUnsaved" xml:space="preserve">
+    <value>已從清單中移除尚未儲存的族。</value>
+  </data>
+  <data name="FamilyLibrary.Delete.PendingChanges" xml:space="preserve">
+    <value>目前仍有新增或編輯尚未儲存，請先儲存或重新整理後再刪除既有族。</value>
+  </data>
+  <data name="FamilyLibrary.Delete.NotFoundInCatalog" xml:space="preserve">
+    <value>所選族已不存在於 catalog.json 中。</value>
+  </data>
+  <data name="FamilyLibrary.Delete.Success" xml:space="preserve">
+    <value>族刪除成功。</value>
+  </data>
+  <data name="FamilyLibrary.Error.SelectedFileMissing" xml:space="preserve">
+    <value>所選族檔案不存在。</value>
+  </data>
+  <data name="FamilyLibrary.Error.OnlyRfaFiles" xml:space="preserve">
+    <value>只能新增 .rfa 檔案。</value>
+  </data>
+  <data name="FamilyLibrary.Error.SaveMissingSourceFile" xml:space="preserve">
+    <value>新加入的族缺少來源檔案。</value>
+  </data>
+  <data name="FamilyLibrary.Error.SaveDestinationExists" xml:space="preserve">
+    <value>目標族檔案已存在：{0}</value>
+  </data>
+  <data name="FamilyLibrary.Error.DisplayNameRequired" xml:space="preserve">
+    <value>族顯示名稱不能為空。</value>
+  </data>
+  <data name="FamilyLibrary.Save.Success" xml:space="preserve">
+    <value>族庫儲存成功。</value>
+  </data>
+  <data name="FamilyLibrary.UnsavedChanges.Refresh" xml:space="preserve">
+    <value>要放棄未儲存的變更並重新載入族庫清單嗎？</value>
+  </data>
+  <data name="FamilyLibrary.UnsavedChanges.Close" xml:space="preserve">
+    <value>目前有未儲存的變更，確定關閉視窗並放棄這些變更嗎？</value>
+  </data>
+  <data name="FamilyLibrary.Status.Saved" xml:space="preserve">
+    <value>沒有待儲存的變更</value>
+  </data>
+  <data name="FamilyLibrary.Status.Unsaved" xml:space="preserve">
+    <value>有未儲存的變更</value>
+  </data>
+  <data name="Ribbon.Button.PathPreview" xml:space="preserve">
+    <value>路徑預覽</value>
+  </data>
+  <data name="Ribbon.Button.Ground" xml:space="preserve">
+    <value>建立地面</value>
+  </data>
+  <data name="Ribbon.Button.ExportIfc" xml:space="preserve">
+    <value>匯出IFC</value>
+  </data>
+  <data name="Ribbon.Button.Help" xml:space="preserve">
+    <value>注意事項</value>
+  </data>
+  <data name="Ribbon.Button.HealthCheck" xml:space="preserve">
+    <value>健康檢查</value>
+  </data>
+  <data name="Ribbon.Button.ProjectInit" xml:space="preserve">
+    <value>初始化專案</value>
+  </data>
+  <data name="Ribbon.Button.PickPathCoordinates" xml:space="preserve">
+    <value>拾取路徑座標</value>
+  </data>
+  <data name="Ribbon.Button.RoomRec" xml:space="preserve">
+    <value>房間識別</value>
+  </data>
+  <data name="Ribbon.Button.SetDoorWidth" xml:space="preserve">
+    <value>設定門寬度</value>
+  </data>
+  <data name="Ribbon.Button.ImportDwg.Tooltip" xml:space="preserve">
+    <value>匯入DWG檔案。</value>
+  </data>
+  <data name="Ribbon.Button.RefreshDwg.Tooltip" xml:space="preserve">
+    <value>檢查目前 DWG 檔案是否更新，並在需要時刷新目前連結。</value>
+  </data>
+  <data name="Ribbon.Button.MainPanel.Tooltip" xml:space="preserve">
+    <value>開啟主面板。</value>
+  </data>
+  <data name="Ribbon.Button.PathPreview.Tooltip" xml:space="preserve">
+    <value>顯示三維路徑預覽。</value>
+  </data>
+  <data name="Ribbon.Button.Ground.Tooltip" xml:space="preserve">
+    <value>建立地面。</value>
+  </data>
+  <data name="Ribbon.Button.ExportIfc.Tooltip" xml:space="preserve">
+    <value>匯出IFC檔案。</value>
+  </data>
+  <data name="Ribbon.Button.Help.Tooltip" xml:space="preserve">
+    <value>顯示說明。</value>
+  </data>
+  <data name="Ribbon.Button.HealthCheck.Tooltip" xml:space="preserve">
+    <value>執行介面健康檢查占位流程。</value>
+  </data>
+  <data name="Ribbon.Button.ProjectInit.Tooltip" xml:space="preserve">
+    <value>執行專案初始化占位流程。</value>
+  </data>
+  <data name="Ribbon.Button.PickPathCoordinates.Tooltip" xml:space="preserve">
+    <value>在 AI_PATH_PREVIEW_3D 中依序拾取路徑點並把 JSON 座標寫入日誌。</value>
+  </data>
+  <data name="Ribbon.Button.RoomRec.Tooltip" xml:space="preserve">
+    <value>開啟房間識別。</value>
+  </data>
+  <data name="Ribbon.Button.SetDoorWidth.Tooltip" xml:space="preserve">
+    <value>測試設定門寬度。</value>
+  </data>
+  <data name="DockablePane.Title.CadImportWizard" xml:space="preserve">
+    <value>CAD匯入精靈</value>
+  </data>
+  <data name="DockablePane.Status.NotAnalyzed" xml:space="preserve">
+    <value>未分析</value>
+  </data>
+  <data name="DockablePane.Status.Success" xml:space="preserve">
+    <value>成功</value>
+  </data>
+  <data name="DockablePane.Status.Failed" xml:space="preserve">
+    <value>失敗</value>
+  </data>
+  <data name="DockablePane.Status.HighlightedGeneratedElements" xml:space="preserve">
+    <value>已高亮圖層 {1} 對應的 {0} 個已生成構件。</value>
+  </data>
+  <data name="DockablePane.Status.NoGeneratedElementsForLayer" xml:space="preserve">
+    <value>圖層 {0} 暫無已生成構件。</value>
+  </data>
+  <data name="DockablePane.Status.HighlightUnavailable" xml:space="preserve">
+    <value>目前未找到可用於高亮的 CAD 連結或標高。</value>
+  </data>
+  <data name="DockablePane.Status.InvalidSelectedLayer" xml:space="preserve">
+    <value>目前選中的圖層無效。</value>
+  </data>
+  <data name="DockablePane.Status.HighlightCleared" xml:space="preserve">
+    <value>已清除生成元素高亮。</value>
+  </data>
+  <data name="DockablePane.Label.LastAnalyzeFormat" xml:space="preserve">
+    <value>上次分析：{0}</value>
+  </data>
+  <data name="DockablePane.Button.LayerAnalyze" xml:space="preserve">
+    <value>圖層分析</value>
+  </data>
+  <data name="DockablePane.Button.CadHide" xml:space="preserve">
+    <value>圖紙隱藏</value>
+  </data>
+  <data name="DockablePane.Button.CadShow" xml:space="preserve">
+    <value>圖紙顯示</value>
+  </data>
+  <data name="DockablePane.Button.BuildingHide" xml:space="preserve">
+    <value>建築元素隱藏</value>
+  </data>
+  <data name="DockablePane.Button.BuildingShow" xml:space="preserve">
+    <value>建築元素顯示</value>
+  </data>
+  <data name="DockablePane.Button.Save" xml:space="preserve">
+    <value>儲存配置</value>
+  </data>
+  <data name="DockablePane.Button.Preview" xml:space="preserve">
+    <value>預覽</value>
+  </data>
+  <data name="DockablePane.Button.GenElements" xml:space="preserve">
+    <value>建立構件</value>
+  </data>
+  <data name="DockablePane.Button.Export" xml:space="preserve">
+    <value>匯出</value>
+  </data>
+  <data name="DockablePane.Button.Regenerate" xml:space="preserve">
+    <value>重新生成</value>
+  </data>
+  <data name="DockablePane.Button.SelectAll" xml:space="preserve">
+    <value>全選</value>
+  </data>
+  <data name="DockablePane.Button.DeselectAll" xml:space="preserve">
+    <value>全不選</value>
+  </data>
+  <data name="DockablePane.Column.Selected" xml:space="preserve">
+    <value>已選</value>
+  </data>
+  <data name="DockablePane.Column.LayerName" xml:space="preserve">
+    <value>圖層名</value>
+  </data>
+  <data name="DockablePane.Column.Category" xml:space="preserve">
+    <value>類別</value>
+  </data>
+  <data name="DockablePane.Label.Layers" xml:space="preserve">
+    <value>圖層</value>
+  </data>
+  <data name="DockablePane.Label.Selected" xml:space="preserve">
+    <value>已選</value>
+  </data>
+  <data name="DockablePane.Label.Ignore" xml:space="preserve">
+    <value>忽略</value>
+  </data>
+  <data name="DockablePane.Feedback.Title" xml:space="preserve">
+    <value>操作回饋</value>
+  </data>
+  <data name="DockablePane.Status.DwgFormat" xml:space="preserve">
+    <value>DWG: {0}</value>
+  </data>
+  <data name="DockablePane.Status.UnitLevelFormat" xml:space="preserve">
+    <value>單位: {0}   標高: {1}</value>
+  </data>
+  <data name="DockablePane.Status.GeometryCountFormat" xml:space="preserve">
+    <value>線段: {0}  弧線: {1}  多段線: {2}</value>
+  </data>
+  <data name="DockablePane.Status.StatusFormat" xml:space="preserve">
+    <value>狀態: {0}</value>
+  </data>
+  <data name="DockablePane.Status.Analyzing" xml:space="preserve">
+    <value>分析中...</value>
+  </data>
+  <data name="DockablePane.Status.Previewing" xml:space="preserve">
+    <value>預覽中...</value>
+  </data>
+  <data name="DockablePane.Status.Clearing" xml:space="preserve">
+    <value>清除預覽中...</value>
+  </data>
+  <data name="DockablePane.Status.CreatingWalls" xml:space="preserve">
+    <value>建立牆體中...</value>
+  </data>
+  <data name="DockablePane.Status.CreatingDoors" xml:space="preserve">
+    <value>建立門中...</value>
+  </data>
+  <data name="DockablePane.Status.CreatingFloors" xml:space="preserve">
+    <value>建立地面中...</value>
+  </data>
+  <data name="DockablePane.Status.Syncing" xml:space="preserve">
+    <value>同步構件中...</value>
+  </data>
+  <data name="DockablePane.Status.TogglingCad" xml:space="preserve">
+    <value>切換圖紙顯示中...</value>
+  </data>
+  <data name="DockablePane.Status.TogglingBuilding" xml:space="preserve">
+    <value>切換建築元素顯示中...</value>
+  </data>
+  <data name="DockablePane.Status.Saved" xml:space="preserve">
+    <value>已儲存</value>
+  </data>
+  <data name="DockablePane.Status.Preset" xml:space="preserve">
+    <value>預設</value>
+  </data>
+  <data name="DockablePane.Status.PerfLog" xml:space="preserve">
+    <value>效能日誌</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.Title" xml:space="preserve">
+    <value>全域進階設定</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.SafeMode" xml:space="preserve">
+    <value>安全模式（建議）</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.AutoJoin" xml:space="preserve">
+    <value>建立後自動連接牆體</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.RoomRecognition" xml:space="preserve">
+    <value>房間識別</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.RecognitionWindow" xml:space="preserve">
+    <value>識別視窗（m）</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.RoomTextLayers" xml:space="preserve">
+    <value>房間文字圖層</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.TargetKeywords" xml:space="preserve">
+    <value>目標關鍵字</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.RoomDoorGapMax" xml:space="preserve">
+    <value>房門最大缺口(mm)</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.RoomSmallGapPatch" xml:space="preserve">
+    <value>房間小缺口補齊(mm)</value>
+  </data>
+  <data name="DockablePane.GlobalAdvanced.HeadRoom" xml:space="preserve">
+    <value>淨空高度</value>
+  </data>
+  <data name="DockablePane.Field.WallHeightMm" xml:space="preserve">
+    <value>牆高度 (WallHeightMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallBaseOffsetMm" xml:space="preserve">
+    <value>牆底部偏移 (WallBaseOffsetMm)</value>
+  </data>
+  <data name="DockablePane.Field.MinWallLengthMm" xml:space="preserve">
+    <value>最小牆長 (MinWallLengthMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallThicknessTolMm" xml:space="preserve">
+    <value>牆厚匹配容差 (WallThicknessTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.MaxWallThicknessMm" xml:space="preserve">
+    <value>最大牆厚 (MaxWallThicknessMm)</value>
+  </data>
+  <data name="DockablePane.Field.DefaultSingleWallThicknessMm" xml:space="preserve">
+    <value>單線牆默認厚度 (DefaultSingleWallThicknessMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallParallelAngleTolDeg" xml:space="preserve">
+    <value>平行角度容差 (WallParallelAngleTolDeg)</value>
+  </data>
+  <data name="DockablePane.Field.WallEndpointMergeTolMm" xml:space="preserve">
+    <value>端點合併容差 (WallEndpointMergeTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallArcThicknessTolMm" xml:space="preserve">
+    <value>弧牆厚度容差 (WallArcThicknessTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallEndpointClusterTolMm" xml:space="preserve">
+    <value>端點聚類容差 (WallEndpointClusterTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallExtendSearchTolMm" xml:space="preserve">
+    <value>延伸搜索容差 (WallExtendSearchTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallDuplicateTolMm" xml:space="preserve">
+    <value>重複線容差 (WallDuplicateTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallAngleSnapDeg" xml:space="preserve">
+    <value>角度吸附容差 (WallAngleSnapDeg)</value>
+  </data>
+  <data name="DockablePane.Field.WallExtendCollinearTolMm" xml:space="preserve">
+    <value>共線延伸容差 (WallExtendCollinearTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallCollinearOffsetTolMm" xml:space="preserve">
+    <value>共線偏移容差 (WallCollinearOffsetTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallExtendProjectionTolMm" xml:space="preserve">
+    <value>投影延伸容差 (WallExtendProjectionTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableOrthogonalSnap" xml:space="preserve">
+    <value>啟用正交吸附 (WallEnableOrthogonalSnap)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableExtendToIntersection" xml:space="preserve">
+    <value>啟用交點延伸 (WallEnableExtendToIntersection)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableEndpointClustering" xml:space="preserve">
+    <value>啟用端點聚類 (WallEnableEndpointClustering)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableDuplicateRemoval" xml:space="preserve">
+    <value>啟用重複移除 (WallEnableDuplicateRemoval)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableExtendCollinear" xml:space="preserve">
+    <value>啟用共線延伸 (WallEnableExtendCollinear)</value>
+  </data>
+    <data name="DockablePane.Field.WallEnableMergeCollinear" xml:space="preserve">
+    <value>Enable Collinear Merge (WallEnableMergeCollinear)</value>
+  </data><data name="DockablePane.Field.WallUseDirectionalClustering" xml:space="preserve">
+    <value>啟用方向聚類 (WallUseDirectionalClustering)</value>
+  </data>
+  <data name="DockablePane.Field.WallForceSingleLineMode" xml:space="preserve">
+    <value>強制單線模式 (WallForceSingleLineMode)</value>
+  </data>
+  <data name="DockablePane.Field.WallDoubleLineSingleWallPlaceMode" xml:space="preserve">
+    <value>雙線單牆放置策略 (WallDoubleLineSingleWallPlaceMode)</value>
+  </data>
+  <data name="DockablePane.Field.WallEnableAutoDoubleLineThickness" xml:space="preserve">
+    <value>啟用自動雙線厚度 (WallEnableAutoDoubleLineThickness)</value>
+  </data>
+  <data name="DockablePane.Field.WallAutoThicknessTopK" xml:space="preserve">
+    <value>厚度峰值TopK (WallAutoThicknessTopK)</value>
+  </data>
+  <data name="DockablePane.Field.WallAutoThicknessBinMm" xml:space="preserve">
+    <value>厚度分箱(mm) (WallAutoThicknessBinMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallMinDoubleLineThicknessMm" xml:space="preserve">
+    <value>最小雙線牆厚(mm) (WallMinDoubleLineThicknessMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallMinDoubleLineOverlapLenMm" xml:space="preserve">
+    <value>最小雙線重疊(mm) (WallMinDoubleLineOverlapLenMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallDoubleLineLengthPolicy" xml:space="preserve">
+    <value>雙線長度策略 (WallDoubleLineLengthPolicy)</value>
+  </data>
+  <data name="DockablePane.Field.WallDoubleLineAdaptiveContainTolMm" xml:space="preserve">
+    <value>Adaptive包含容差(mm) (WallDoubleLineAdaptiveContainTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.WallDoubleLineAdaptiveExtendMaxMm" xml:space="preserve">
+    <value>Adaptive端點延伸上限(mm) (WallDoubleLineAdaptiveExtendMaxMm)</value>
+  </data>
+  <data name="DockablePane.Field.EnableOverride" xml:space="preserve">
+    <value>啟用覆寫</value>
+  </data>
+  <data name="DockablePane.Field.ApplyCategoryDefault" xml:space="preserve">
+    <value>套用類別預設值</value>
+  </data>
+  <data name="DockablePane.Field.DoorHeightMm" xml:space="preserve">
+    <value>門高度 (DoorHeightMm)</value>
+  </data>
+  <data name="DockablePane.Field.DoorSillHeightMm" xml:space="preserve">
+    <value>門檻高度 (DoorSillHeightMm)</value>
+  </data>
+  <data name="DockablePane.Field.MinDoorWidthMm" xml:space="preserve">
+    <value>最小門寬 (MinDoorWidthMm)</value>
+  </data>
+  <data name="DockablePane.Field.MaxDoorWidthMm" xml:space="preserve">
+    <value>最大門寬 (MaxDoorWidthMm)</value>
+  </data>
+  <data name="DockablePane.Field.DoorWallMatchTolMm" xml:space="preserve">
+    <value>門匹配牆距離 (DoorWallMatchTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.UseFixedDoorWidth" xml:space="preserve">
+    <value>使用固定門寬 (UseFixedDoorWidth)</value>
+  </data>
+  <data name="DockablePane.Field.DoorExpectedWidthMm" xml:space="preserve">
+    <value>固定門寬 (DoorExpectedWidthMm)</value>
+  </data>
+  <data name="DockablePane.Field.PreferGeometryOpeningWidth" xml:space="preserve">
+    <value>優先幾何門洞寬度 (PreferGeometryOpeningWidth)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnClusterAlgorithm" xml:space="preserve">
+    <value>聚類算法 (ColumnClusterAlgorithm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnClusterTolMm" xml:space="preserve">
+    <value>聚類距離 (ColumnClusterTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMinGroupSegments" xml:space="preserve">
+    <value>最小線段數 (ColumnMinGroupSegments)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMinSizeMm" xml:space="preserve">
+    <value>最小尺寸 (ColumnMinSizeMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMaxSizeMm" xml:space="preserve">
+    <value>最大尺寸 (ColumnMaxSizeMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnEnableLongLineFilter" xml:space="preserve">
+    <value>過濾超長線段 (ColumnEnableLongLineFilter)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMaxSegmentLengthMm" xml:space="preserve">
+    <value>最大線長 (ColumnMaxSegmentLengthMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnEnableMerge" xml:space="preserve">
+    <value>啟用候選合併 (ColumnEnableMerge)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMergeTolMm" xml:space="preserve">
+    <value>合併距離 (ColumnMergeTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMergeStrategy" xml:space="preserve">
+    <value>合併策略 (ColumnMergeStrategy)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnEndpointTolMm" xml:space="preserve">
+    <value>端點容差 (ColumnEndpointTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnGapTolMm" xml:space="preserve">
+    <value>斷裂容差 (ColumnGapTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMinAreaM2" xml:space="preserve">
+    <value>最小面積 (ColumnMinAreaM2)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMaxAspectRatio" xml:space="preserve">
+    <value>最大長寬比 (ColumnMaxAspectRatio)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnMinFillRatio" xml:space="preserve">
+    <value>最小填充率 (ColumnMinFillRatio)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnDedupePlacedTolMm" xml:space="preserve">
+    <value>已放置去重距離 (ColumnDedupePlacedTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnAreaWeight" xml:space="preserve">
+    <value>面積權重 (ColumnAreaWeight)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnSegmentCountWeight" xml:space="preserve">
+    <value>線段數權重 (ColumnSegmentCountWeight)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnRectnessWeight" xml:space="preserve">
+    <value>矩形度權重 (ColumnRectnessWeight)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnLongLinePenalty" xml:space="preserve">
+    <value>長線懲罰 (ColumnLongLinePenalty)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnIrregularEnable" xml:space="preserve">
+    <value>啟用異形柱 (ColumnIrregularEnable)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnIrregularMaxSizeMm" xml:space="preserve">
+    <value>異形最大尺寸 (ColumnIrregularMaxSizeMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnIrregularGapTolMm" xml:space="preserve">
+    <value>異形缺口容差 (ColumnIrregularGapTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnIrregularMinAreaM2" xml:space="preserve">
+    <value>異形最小面積 (ColumnIrregularMinAreaM2)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnAttachToWallEnable" xml:space="preserve">
+    <value>啟用貼牆吸附 (ColumnAttachToWallEnable)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnAttachToWallSnapTolMm" xml:space="preserve">
+    <value>貼牆吸附距離 (ColumnAttachToWallSnapTolMm)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnAttachToWallTarget" xml:space="preserve">
+    <value>貼牆目標 (ColumnAttachToWallTarget)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnAttachToWallAllowOverlap" xml:space="preserve">
+    <value>貼牆允許重疊 (ColumnAttachToWallAllowOverlap)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnDebugDrawCandidates" xml:space="preserve">
+    <value>調試:繪製候選 (ColumnDebugDrawCandidates)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnDebugDrawClusterId" xml:space="preserve">
+    <value>調試:繪製編號 (ColumnDebugDrawClusterId)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnDebugDrawRejectReason" xml:space="preserve">
+    <value>調試:剔除原因 (ColumnDebugDrawRejectReason)</value>
+  </data>
+  <data name="DockablePane.Field.ColumnDebugExportReport" xml:space="preserve">
+    <value>調試:導出報告 (ColumnDebugExportReport)</value>
+  </data>
+  <data name="LayerAnalysis.WindowTitle" xml:space="preserve">
+    <value>圖層分析結果</value>
+  </data>
+  <data name="LayerAnalysis.StandardTitle" xml:space="preserve">
+    <value>EMSD CAD 圖層編碼標準</value>
+  </data>
+  <data name="LayerAnalysis.ValidationCompleted" xml:space="preserve">
+    <value>圖層校驗完成</value>
+  </data>
+  <data name="LayerAnalysis.ValidLayers" xml:space="preserve">
+    <value>有效圖層</value>
+  </data>
+  <data name="LayerAnalysis.InvalidLayers" xml:space="preserve">
+    <value>無效圖層</value>
+  </data>
+  <data name="LayerAnalysis.DwgFormat" xml:space="preserve">
+    <value>DWG: {0}</value>
+  </data>
+  <data name="LayerAnalysis.Unknown" xml:space="preserve">
+    <value>（未知）</value>
+  </data>
+  <data name="LayerAnalysis.SummaryFormat" xml:space="preserve">
+    <value>共 {0} 個圖層，其中 {1} 個符合 EMSD CAD 標準。</value>
+  </data>
+  <data name="LayerAnalysis.None" xml:space="preserve">
+    <value>（無）</value>
+  </data>
+  <data name="LayerAnalysis.UnmatchedStandard" xml:space="preserve">
+    <value>未匹配標準</value>
+  </data>
+  <data name="LayerAnalysis.Close" xml:space="preserve">
+    <value>關閉</value>
+  </data>
+  <data name="DockablePane.Settings.Title" xml:space="preserve">
+    <value>圖層設定</value>
+  </data>
+  <data name="DockablePane.Settings.TitleWithLayer" xml:space="preserve">
+    <value>圖層設定 - {0}</value>
+  </data>
+  <data name="DockablePane.Settings.LayerFormat" xml:space="preserve">
+    <value>圖層: {0}</value>
+  </data>
+  <data name="DockablePane.Settings.CategoryFormat" xml:space="preserve">
+    <value>類別: {0}</value>
+  </data>
+  <data name="DockablePane.Settings.RevitParamsSummaryFormat" xml:space="preserve">
+    <value>類別={0}, 族類型={1}</value>
+  </data>
+  <data name="DockablePane.Settings.DebugSummaryFormat" xml:space="preserve">
+    <value>覆寫={0}, 預設={1}, 最小長度={2}, 牆厚={3}</value>
+  </data>
+  <data name="DockablePane.Message.ConfirmSave" xml:space="preserve">
+    <value>確認儲存目前圖層映射嗎？</value>
+  </data>
+  <data name="DockablePane.Message.ConfirmSync" xml:space="preserve">
+    <value>依目前圖層勾選同步模型嗎？\n\n- 目前勾選圖層將建立或重建\n- 已取消勾選且由 CadToRevit 產生的舊元素將被移除\n- 參數已變更的圖層將依目前設定重建</value>
+  </data>
+  <data name="DockablePane.Message.Saved" xml:space="preserve">
+    <value>已儲存。</value>
+  </data>
+  <data name="DockablePane.Message.Done" xml:space="preserve">
+    <value>完成。</value>
+  </data>
+  <data name="DockablePane.Message.SyncFinished" xml:space="preserve">
+    <value>同步完成。</value>
+  </data>
+  <data name="DockablePane.Message.SyncResultTitle" xml:space="preserve">
+    <value>CadToRevit - 同步結果</value>
+  </data>
+  <data name="DockablePane.Message.ConfirmRegenerate" xml:space="preserve">
+    <value>將刪除目前 DWG 產生的舊構件，並依目前圖層映射重新生成。是否繼續？</value>
+  </data>
+  <data name="DockablePane.Message.RegenerateFinished" xml:space="preserve">
+    <value>重新生成完成。</value>
+  </data>
+  <data name="DockablePane.Message.RegenerateResultTitle" xml:space="preserve">
+    <value>CadToRevit - 重新生成結果</value>
+  </data>
+  <data name="DockablePane.Message.PresetExported" xml:space="preserve">
+    <value>預設已匯出。</value>
+  </data>
+  <data name="DockablePane.Label.SavedAtFormat" xml:space="preserve">
+    <value>儲存於 {0}</value>
+  </data>
+  <data name="DockablePane.Label.LastActionFormat" xml:space="preserve">
+    <value>最近操作: {0}</value>
+  </data>
+  <data name="DockablePane.Label.PresetExportedAtFormat" xml:space="preserve">
+    <value>預設匯出於 {0}</value>
+  </data>
+  <data name="DockablePane.Label.PerfLogCopiedAtFormat" xml:space="preserve">
+    <value>效能日誌複製於 {0}</value>
+  </data>
+  <data name="Common.NA" xml:space="preserve">
+    <value>N/A</value>
+  </data>
+  <data name="Progress.Ready" xml:space="preserve">
+    <value>準備中...</value>
+  </data>
+  <data name="Progress.Cancelling" xml:space="preserve">
+    <value>取消中...</value>
+  </data>
+  <data name="DockablePane.Tab.Normal" xml:space="preserve">
+    <value>一般</value>
+  </data>
+  <data name="DockablePane.Tab.Expert" xml:space="preserve">
+    <value>進階</value>
+  </data>
+  <data name="DockablePane.Tab.RevitParams" xml:space="preserve">
+    <value>Revit參數</value>
+  </data>
+  <data name="DockablePane.Tab.Debug" xml:space="preserve">
+    <value>除錯</value>
+  </data>
+  <data name="DockablePane.Tab.WallRecognition" xml:space="preserve">
+    <value>識別參數</value>
+  </data>
+  <data name="DockablePane.Tab.WallModeling" xml:space="preserve">
+    <value>建模參數</value>
+  </data>
+  <data name="DockablePane.Tab.WallDoubleLine" xml:space="preserve">
+    <value>雙線策略</value>
+  </data>
+  <data name="DockablePane.Tab.WallTopology" xml:space="preserve">
+    <value>拓撲修補</value>
+  </data>
+  <data name="Dialog.Info.Title" xml:space="preserve">
+    <value>提示</value>
+  </data>
+  <data name="Dialog.HealthCheck.Title" xml:space="preserve">
+    <value>健康檢查</value>
+  </data>
+  <data name="Dialog.HealthCheck.Success" xml:space="preserve">
+    <value>OK。健康檢查成功。
+服務時間：{0}
+會話數：{1}</value>
+  </data>
+  <data name="Dialog.HealthCheck.Failed" xml:space="preserve">
+    <value>健康檢查失敗。
+狀態：{0}
+回應：{1}</value>
+  </data>
+  <data name="Dialog.HealthCheck.Error" xml:space="preserve">
+    <value>健康檢查請求失敗：{0}</value>
+  </data>
+  <data name="Dialog.ProjectInit.Title" xml:space="preserve">
+    <value>初始化專案</value>
+  </data>
+  <data name="Dialog.ProjectInit.HeadroomHeight" xml:space="preserve">
+    <value>淨空高度</value>
+  </data>
+  <data name="Dialog.ProjectInit.DoorWidthToleranceMm" xml:space="preserve">
+    <value>門寬容差（mm）</value>
+  </data>
+  <data name="Dialog.ProjectInit.DwgFilePath" xml:space="preserve">
+    <value>DWG檔案路徑</value>
+  </data>
+  <data name="Dialog.ProjectInit.ProjectName" xml:space="preserve">
+    <value>專案名稱</value>
+  </data>
+  <data name="Dialog.ProjectInit.ProjectIdentifier" xml:space="preserve">
+    <value>專案識別符</value>
+  </data>
+  <data name="Dialog.ProjectInit.Ok" xml:space="preserve">
+    <value>確定</value>
+  </data>
+  <data name="Dialog.ProjectInit.Close" xml:space="preserve">
+    <value>關閉</value>
+  </data>
+  <data name="Dialog.ProjectInit.InvalidHeadroomHeight" xml:space="preserve">
+    <value>請輸入有效的數字淨空高度。</value>
+  </data>
+  <data name="Dialog.ProjectInit.InvalidDoorWidthToleranceMm" xml:space="preserve">
+    <value>請輸入有效的數字門寬容差（mm）。</value>
+  </data>
+  <data name="Dialog.ProjectInit.ResultTitle" xml:space="preserve">
+    <value>初始化專案執行完成</value>
+  </data>
+  <data name="Dialog.ProjectInit.ResponseSummary" xml:space="preserve">
+    <value>淨空高度：{0}
+門寬容差（mm）：{1}
+專案名稱：{2}
+專案識別符：{3}
+DWG檔案路徑：{4}
+請展開下方查看完整返回值。</value>
+  </data>
+  <data name="Dialog.ProjectInit.ErrorTitle" xml:space="preserve">
+    <value>初始化專案執行失敗</value>
+  </data>
+  <data name="Dialog.ProjectInit.ErrorSummary" xml:space="preserve">
+    <value>請展開下方查看完整錯誤詳情。</value>
+  </data>
+  <data name="Dialog.Warning.Title" xml:space="preserve">
+    <value>警告</value>
+  </data>
+  <data name="Dialog.Error.Title" xml:space="preserve">
+    <value>錯誤</value>
+  </data>
+  <data name="Dialog.Validation.Title" xml:space="preserve">
+    <value>驗證</value>
+  </data>
+  <data name="Dialog.OperationSucceeded.Title" xml:space="preserve">
+    <value>操作成功</value>
+  </data>
+  <data name="Dialog.OperationFailed.Title" xml:space="preserve">
+    <value>操作失敗</value>
+  </data>
+  <data name="Dialog.NoCadLink.Message" xml:space="preserve">
+    <value>未找到 CAD Link（ImportInstance），請先連結 CAD 檔案。</value>
+  </data>
+  <data name="Dialog.NoLevelFound.Message" xml:space="preserve">
+    <value>目前文件中未找到標高。</value>
+  </data>
+  <data name="Dialog.NoSupportedGeometry.Message" xml:space="preserve">
+    <value>所選 CAD Link 中未找到可支援的幾何。</value>
+  </data>
+  <data name="Dialog.NoSegmentsExtracted.Message" xml:space="preserve">
+    <value>未擷取到 WALL/DOOR/WINDOW/GRID 線段。</value>
+  </data>
+  <data name="Dialog.NoWallTypeFound.Message" xml:space="preserve">
+    <value>目前文件中未找到牆類型。</value>
+  </data>
+  <data name="Dialog.NoWallCenterlines.Message" xml:space="preserve">
+    <value>未從 WALL 圖層識別到牆中心線。</value>
+  </data>
+  <data name="Dialog.NoLevelOrCeilingType.Message" xml:space="preserve">
+    <value>未找到可用標高或天花板類型。</value>
+  </data>
+  <data name="Command.AnalyzeCadLink.Title" xml:space="preserve">
+    <value>分析 CAD Link</value>
+  </data>
+  <data name="Command.AnalyzeCadSegments.Title" xml:space="preserve">
+    <value>分析 CAD 線段</value>
+  </data>
+  <data name="Command.AnalyzeDoorCandidates.Title" xml:space="preserve">
+    <value>分析門候選</value>
+  </data>
+  <data name="Command.AnalyzeWallCenterlines.Title" xml:space="preserve">
+    <value>分析牆中心線</value>
+  </data>
+  <data name="Command.CreateDoors.Title" xml:space="preserve">
+    <value>建立門</value>
+  </data>
+  <data name="Command.CreateWalls.Title" xml:space="preserve">
+    <value>建立牆</value>
+  </data>
+  <data name="Command.CreateWindows.Title" xml:space="preserve">
+    <value>建立窗</value>
+  </data>
+  <data name="Command.CreateCeilings.Title" xml:space="preserve">
+    <value>建立天花板</value>
+  </data>
+  <data name="Progress.Title" xml:space="preserve">
+    <value>進度</value>
+  </data>
+  <data name="Progress.Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Progress.DetailDefault" xml:space="preserve">
+    <value>圖層: -</value>
+  </data>
+  <data name="Progress.StagePreparing" xml:space="preserve">
+    <value>準備建立</value>
+  </data>
+  <data name="Progress.InitializingTask" xml:space="preserve">
+    <value>正在初始化任務...</value>
+  </data>
+  <data name="Progress.StageRecognizeGenerate" xml:space="preserve">
+    <value>階段: 識別與建立</value>
+  </data>
+  <data name="Progress.StageCompleted" xml:space="preserve">
+    <value>階段: 完成</value>
+  </data>
+  <data name="Progress.Analyzing" xml:space="preserve">
+    <value>正在分析</value>
+  </data>
+  <data name="Progress.Generating" xml:space="preserve">
+    <value>正在建立</value>
+  </data>
+  <data name="Progress.Exporting" xml:space="preserve">
+    <value>正在匯出</value>
+  </data>
+  <data name="Progress.Completed" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="Progress.DetailLayerFormat" xml:space="preserve">
+    <value>圖層: {0}</value>
+  </data>
+  <data name="Progress.StageJoinPost" xml:space="preserve">
+    <value>階段: Join 後處理</value>
+  </data>
+  <data name="Progress.JoiningWalls" xml:space="preserve">
+    <value>正在 Join 牆體...</value>
+  </data>
+  <data name="Progress.StageCreateWalls" xml:space="preserve">
+    <value>階段: 建立牆體</value>
+  </data>
+  <data name="Progress.StageCreateArcWalls" xml:space="preserve">
+    <value>階段: 建立弧牆</value>
+  </data>
+  <data name="Progress.BatchSizeFormat" xml:space="preserve">
+    <value>批次大小={0}</value>
+  </data>
+  <data name="Progress.StageRetrySplit" xml:space="preserve">
+    <value>階段: 重試拆分</value>
+  </data>
+  <data name="Progress.SplitFailedWallBatch" xml:space="preserve">
+    <value>牆體批次拆分失敗...</value>
+  </data>
+  <data name="Progress.SplitFailedArcWallBatch" xml:space="preserve">
+    <value>弧牆批次拆分失敗...</value>
+  </data>
+  <data name="Dialog.DwgImport.PickFile.Title" xml:space="preserve">
+    <value>選擇 DWG 檔案</value>
+  </data>
+  <data name="Dialog.DwgImport.PickFile.Filter" xml:space="preserve">
+    <value>DWG 檔案 (*.dwg)|*.dwg</value>
+  </data>
+  <data name="Dialog.DwgImport.ReplaceExisting.Title" xml:space="preserve">
+    <value>偵測到已載入 DWG</value>
+  </data>
+  <data name="Dialog.DwgImport.ReplaceExisting.Message" xml:space="preserve">
+    <value>目前專案已存在 DWG Link。是否替換為新檔案？{0}選擇「是」將刪除舊 DWG Link 後再匯入。</value>
+  </data>
+  <data name="Dialog.DwgImport.Failed.Title" xml:space="preserve">
+    <value>匯入失敗</value>
+  </data>
+  <data name="Dialog.DwgImport.Failed.MessageFormat" xml:space="preserve">
+    <value>DWG 匯入失敗：{0}</value>
+  </data>
+  <data name="Dialog.DwgImport.Success.Title" xml:space="preserve">
+    <value>匯入完成</value>
+  </data>
+  <data name="Dialog.DwgImport.Success.MessageFormat" xml:space="preserve">
+    <value>DWG Link 匯入成功。{0}實例ID：{1}{0}圖層數：{2}</value>
+  </data>
+  <data name="Dialog.DwgImport.Success.UnitSuspicious" xml:space="preserve">
+    <value>警告：匯入包圍盒異常偏大，請檢查來源 DWG 單位。</value>
+  </data>
+  <data name="Dialog.DwgRefresh.Title" xml:space="preserve">
+    <value>DWG 刷新結果</value>
+  </data>
+  <data name="Dialog.DwgRefresh.NoChange" xml:space="preserve">
+    <value>DWG 暫無更新。</value>
+  </data>
+  <data name="Dialog.DwgRefresh.Updated" xml:space="preserve">
+    <value>DWG 已更新，目前生成結果可能已過期。</value>
+  </data>
+  <data name="Dialog.DwgRefresh.FailedFormat" xml:space="preserve">
+    <value>DWG 刷新失敗：{0}</value>
+  </data>
+  <data name="Dialog.DwgRefresh.NoLink" xml:space="preserve">
+    <value>目前專案未找到 DWG Link。</value>
+  </data>
+  <data name="Dialog.DwgRefresh.PathResolveFailed" xml:space="preserve">
+    <value>無法解析目前 DWG 檔案路徑。</value>
+  </data>
+  <data name="Dialog.DwgRefresh.FileMissing" xml:space="preserve">
+    <value>DWG 檔案不存在。</value>
+  </data>
+  <data name="Dialog.DwgRefresh.ReloadUnsupported" xml:space="preserve">
+    <value>目前 Revit API 不支援此 DWG 連結的刷新。</value>
+  </data>
+  <data name="DockablePane.RoomList.Title" xml:space="preserve">
+    <value>房間管理</value>
+  </data>
+  <data name="DockablePane.RoomList.SummaryFormat" xml:space="preserve">
+    <value>找到：{0} | 錯誤：{1}</value>
+  </data>
+  <data name="DockablePane.RoomList.Empty" xml:space="preserve">
+    <value>未找到匹配房間。</value>
+  </data>
+  <data name="DockablePane.RoomList.AreaFormat" xml:space="preserve">
+    <value>面積：{0}</value>
+  </data>
+  <data name="DockablePane.RoomList.LevelFormat" xml:space="preserve">
+    <value>樓層：{0}</value>
+  </data>
+  <data name="DockablePane.RoomList.StatusFormat" xml:space="preserve">
+    <value>狀態：{0}</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Title" xml:space="preserve">
+    <value>房間詳情</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Name" xml:space="preserve">
+    <value>名稱</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Type" xml:space="preserve">
+    <value>類型</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Area" xml:space="preserve">
+    <value>面積</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Level" xml:space="preserve">
+    <value>樓層</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Status" xml:space="preserve">
+    <value>狀態</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Boundary" xml:space="preserve">
+    <value>邊界來源</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.Key" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Label.CloseGap" xml:space="preserve">
+    <value>CloseGap(mm)</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Button.Focus" xml:space="preserve">
+    <value>聚焦房間</value>
+  </data>
+  <data name="DockablePane.RoomDetail.Button.Copy" xml:space="preserve">
+    <value>複製資訊</value>
+  </data>
+  <data name="DockablePane.RoomDetail.SelectHint" xml:space="preserve">
+    <value>請選擇左側房間查看詳情。</value>
+  </data>
+  <data name="DockablePane.RoomDetail.UnnamedRoom" xml:space="preserve">
+    <value>未命名房間</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CopyFormat" xml:space="preserve">
+    <value>名稱: {0}
+類型: {1}
+面積: {2}
+樓層: {3}
+狀態: {4}
+邊界: {5}
+Key: {6}
+CloseGap(mm): {7}</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamilySectionTitle" xml:space="preserve">
+    <value>自訂族</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamily.SetButton" xml:space="preserve">
+    <value>插入</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamily.Empty" xml:space="preserve">
+    <value>目前沒有可用的自訂族。</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamily.SetSuccess" xml:space="preserve">
+    <value>自訂族插入成功：{0}</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamily.SetFailed" xml:space="preserve">
+    <value>自訂族插入失敗：{0}</value>
+  </data>
+  <data name="DockablePane.RoomDetail.CustomFamily.FamilyFileMissing" xml:space="preserve">
+    <value>找不到自訂族檔案：{0}</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.Title" xml:space="preserve">
+    <value>管道選擇</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.ChilledWater" xml:space="preserve">
+    <value>冷凍水：</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.ChilledWaterSupply" xml:space="preserve">
+    <value>冷凍水供水：</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.ChilledWaterReturn" xml:space="preserve">
+    <value>冷凍水回水：</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.HotWater" xml:space="preserve">
+    <value>熱水：</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.HotWaterSupply" xml:space="preserve">
+    <value>熱水供水：</value>
+  </data>
+  <data name="DockablePane.RoomDetail.PipeSelection.HotWaterReturn" xml:space="preserve">
+    <value>熱水回水：</value>
+  </data>
+  <data name="DockablePane.RoomDetail.DuctSelection.Title" xml:space="preserve">
+    <value>風管選擇</value>
+  </data>
+  <data name="Ribbon.Button.ProbeRoom" xml:space="preserve">
+    <value>點查房間</value>
+  </data>
+  <data name="Ribbon.Button.ProbeRoom.Tooltip" xml:space="preserve">
+    <value>在模型中點選一個位置，判斷該點是否位於原生房間或可識別閉合空間內。</value>
+  </data>
+  <data name="RoomProbe.Dialog.Title" xml:space="preserve">
+    <value>點查房間</value>
+  </data>
+  <data name="RoomProbe.PickPointPrompt" xml:space="preserve">
+    <value>請選擇一個位置以判斷是否存在房間。</value>
+  </data>
+  <data name="RoomProbe.NoRoomFound" xml:space="preserve">
+    <value>所選點位未命中任何可識別房間。
+
+{0}</value>
+  </data>
+</root>
+

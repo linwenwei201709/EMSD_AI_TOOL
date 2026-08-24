@@ -1,0 +1,631 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{0D5945F5-E662-44CF-9371-925580EC3ECA}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>CadToRevit</RootNamespace>
+    <AssemblyName>CadToRevit</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoCADSdkIncDir Condition="'$(AutoCADSdkIncDir)' == '' and '$(ObjectArxSdkDir)' != ''">$(ObjectArxSdkDir)\inc</AutoCADSdkIncDir>
+  </PropertyGroup>
+  <Target Name="EnsureAutoCADSdkReferencePath" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(AutoCADSdkIncDir)' == ''" Text="AutoCADSdkIncDir or ObjectArxSdkDir is not configured. Cannot resolve AutoCAD .NET references." />
+    <Error Condition="!Exists('$(AutoCADSdkIncDir)\AcCoreMgd.dll')" Text="Missing $(AutoCADSdkIncDir)\AcCoreMgd.dll. Verify the target ObjectARX SDK setup." />
+    <Error Condition="!Exists('$(AutoCADSdkIncDir)\AcDbMgd.dll')" Text="Missing $(AutoCADSdkIncDir)\AcDbMgd.dll. Verify the target ObjectARX SDK setup." />
+    <Error Condition="!Exists('$(AutoCADSdkIncDir)\AcMgd.dll')" Text="Missing $(AutoCADSdkIncDir)\AcMgd.dll. Verify the target ObjectARX SDK setup." />
+  </Target>
+  <ItemGroup>
+    <Compile Include="Services\Api\IfcMillimeterCoordinateAdapter.cs" />
+    <Reference Include="AcCoreMgd, Version=23.1.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\EMSDRevitPlugs文档相关\AutoCAD_Mgd_DLLs\AcCoreMgd.dll</HintPath>
+    </Reference>
+    <Reference Include="AcDbMgd, Version=23.1.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\EMSDRevitPlugs文档相关\AutoCAD_Mgd_DLLs\AcDbMgd.dll</HintPath>
+    </Reference>
+    <Reference Include="AcMgd, Version=23.1.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\EMSDRevitPlugs文档相关\AutoCAD_Mgd_DLLs\AcMgd.dll</HintPath>
+    </Reference>
+    <Reference Include="FontAwesome.Sharp">
+      <HintPath>..\..\..\FontAwesome.Sharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.8.0.0\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=8.0.0.2, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.DependencyInjection.Abstractions.8.0.2\lib\net462\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions, Version=8.0.0.3, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Extensions.Logging.Abstractions.8.0.3\lib\net462\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Web.WebView2.Core, Version=1.0.2365.46, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Web.WebView2.1.0.2365.46\lib\net45\Microsoft.Web.WebView2.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Web.WebView2.Wpf, Version=1.0.2365.46, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Web.WebView2.1.0.2365.46\lib\net45\Microsoft.Web.WebView2.Wpf.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfSharp, Version=6.2.4.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp.6.2.4\lib\netstandard2.0\PdfSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfSharp.BarCodes, Version=6.2.4.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp.6.2.4\lib\netstandard2.0\PdfSharp.BarCodes.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfSharp.Charting, Version=6.2.4.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp.6.2.4\lib\netstandard2.0\PdfSharp.Charting.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfSharp.Cryptography, Version=6.2.4.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp.6.2.4\lib\netstandard2.0\PdfSharp.Cryptography.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfSharp.Quality, Version=6.2.4.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp.6.2.4\lib\netstandard2.0\PdfSharp.Quality.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfSharp.Shared, Version=6.2.4.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp.6.2.4\lib\netstandard2.0\PdfSharp.Shared.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfSharp.Snippets, Version=6.2.4.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp.6.2.4\lib\netstandard2.0\PdfSharp.Snippets.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfSharp.System, Version=6.2.4.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp.6.2.4\lib\netstandard2.0\PdfSharp.System.dll</HintPath>
+    </Reference>
+    <Reference Include="PdfSharp.WPFonts, Version=6.2.4.0, Culture=neutral, PublicKeyToken=f94615aa0424f9eb, processorArchitecture=MSIL">
+      <HintPath>..\packages\PDFsharp.6.2.4\lib\netstandard2.0\PdfSharp.WPFonts.dll</HintPath>
+    </Reference>
+    <Reference Include="RevitAPI, Version=25.0.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\2024API\RevitAPI.dll</HintPath>
+    </Reference>
+    <Reference Include="RevitAPIUI, Version=25.0.0.0, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\2024API\RevitAPIUI.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.5.1\lib\net461\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="System.Memory, Version=4.0.1.2, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.5\lib\net461\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.5.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Resources.Extensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Resources.Extensions.4.6.0\lib\netstandard2.0\System.Resources.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.3\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Security" />
+    <Reference Include="System.Security.Cryptography.Pkcs, Version=8.0.0.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Security.Cryptography.Pkcs.8.0.1\lib\net462\System.Security.Cryptography.Pkcs.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.0.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.5.4\lib\net461\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="PresentationCore" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="App.cs" />
+    <Compile Include="Commands\AnalyzeLayersCommand.cs" />
+    <Compile Include="Commands\AnalyzeRoomsCommand.cs" />
+    <Compile Include="Commands\AnalyzeRoomsCommandRunner.cs" />
+    <Compile Include="Commands\DwgImportCommand.cs" />
+    <Compile Include="Commands\RoutePlannerCommand.cs" />
+    <Compile Include="Commands\RefreshCurrentDwgLinkCommand.cs" />
+    <Compile Include="Commands\RoomRecognitionCommand.cs" />
+    <Compile Include="Commands\ShowConfigDebugCommand.cs" />
+    <Compile Include="Commands\WallWizardCommand.cs" />
+    <Compile Include="Commands\AnalyzeDoorCandidatesCommand.cs" />
+    <Compile Include="Commands\ShowPreviewPaneCommand.cs" />
+    <Compile Include="Commands\ShowPathPreviewCommand.cs" />
+    <Compile Include="Commands\ShowMultiPathsCommand.cs" />
+    <Compile Include="Commands\CalculatePathApiTestCommand.cs" />
+    <Compile Include="Commands\FixedCoordinateMarkerTestCommand.cs" />
+    <Compile Include="Commands\PickPathCoordinatesCommand.cs" />
+    <Compile Include="Commands\HealthCheckCommand.cs" />
+    <Compile Include="Commands\ProjectInitializationCommand.cs" />
+    <Compile Include="Commands\RvtModelImportCommand.cs" />
+    <Compile Include="Commands\LinkRvtToRoomCommand.cs" />
+    <Compile Include="Commands\RouteApiConsoleCommand.cs" />
+    <Compile Include="Commands\PathObstacleManagerCommand.cs" />
+    <Compile Include="Commands\CreateAhuTestRvtCommand.cs" />
+    <Compile Include="Commands\PickRoomAtPointCommand.cs" />
+    <Compile Include="Commands\GenerateVentilationDuctCommand.cs" />
+    <Compile Include="Commands\ShowGlobalSettingsCommand.cs" />
+    <Compile Include="Commands\OpenFamilyLibraryManagerCommand.cs" />
+    <Compile Include="Commands\ToggleAhuMaintenanceSpaceCommand.cs" />
+    <Compile Include="Commands\CreateCeilingsFromWallsCommand.cs" />
+    <Compile Include="Commands\CreateGroundFloorCommand.cs" />
+    <Compile Include="Commands\SetDoorWidthTestCommand.cs" />
+    <Compile Include="Commands\ExportIfcForPathCommand.cs" />
+    <Compile Include="Commands\ExportDrawingCommand.cs" />
+    <Compile Include="Commands\ShowLayoutPlansCommand.cs" />
+    <Compile Include="Commands\ShowDeliveryRoutesCommand.cs" />
+    <Compile Include="Commands\TargetRoomModelRecognitionCommand.cs" />
+    <Compile Include="Commands\CreateWindowsCommand.cs" />
+    <Compile Include="Commands\CreateDoorsCommand.cs" />
+    <Compile Include="Commands\CreateWallsFromCenterlinesCommand.cs" />
+    <Compile Include="Commands\CreateDynamicGenericWallTestCommand.cs" />
+    <Compile Include="Commands\CreateFirstFamilyTypeWallTestCommand.cs" />
+    <Compile Include="Commands\AnalyzeWallCenterlinesCommand.cs" />
+    <Compile Include="Commands\AnalyzeCadSegmentsCommand.cs" />
+    <Compile Include="Commands\AnalyzeCadLinkCommand.cs" />
+    <Compile Include="Commands\HelloWorldCommand.cs" />
+    <Compile Include="Commands\HelpCommand.cs" />
+    <Compile Include="Commands\ManualRoomCommand.cs" />
+    <Compile Include="Commands\ManualRoomCommandRunner.cs" />
+    <Compile Include="Models\DoorCandidate.cs" />
+    <Compile Include="Models\DoorSymbolFamilyKind.cs" />
+    <Compile Include="Models\DoorCreateResult.cs" />
+    <Compile Include="Models\DoorDetectResult.cs" />
+    <Compile Include="Models\DoorDetectSettings.cs" />
+    <Compile Include="Models\Cad\CadText.cs" />
+    <Compile Include="Models\Cad\CadDataset.cs" />
+    <Compile Include="Models\Path\PathPoint3D.cs" />
+    <Compile Include="Models\Path\PathPolyline.cs" />
+    <Compile Include="Models\Path\RedZonePoint3D.cs" />
+    <Compile Include="Models\Rooms\ConnectivitySizeOptionsModels.cs" />
+    <Compile Include="Models\Rooms\DeliveryRoutes\DeliveryRouteRecordDto.cs" />
+    <Compile Include="Models\Rooms\DeliveryRoutes\DeliveryRouteStorePayload.cs" />
+    <Compile Include="Models\Rooms\DeliveryRoutes\DeliveryRouteSubModuleDto.cs" />
+    <Compile Include="Models\Rooms\EquipmentValidation\AhuPlacementValidationRequest.cs" />
+    <Compile Include="Models\Rooms\EquipmentValidation\AhuPlacementValidationResult.cs" />
+    <Compile Include="Models\Rooms\LayoutPlans\LayoutDeliveryRouteDto.cs" />
+    <Compile Include="Models\Rooms\RoomCandidate.cs" />
+    <Compile Include="Models\Rooms\RoomPointProbeResult.cs" />
+    <Compile Include="Models\Rooms\RoomCustomFamilyCatalogModels.cs" />
+    <Compile Include="Models\Rooms\LayoutPlans\LayoutElementRefDto.cs" />
+    <Compile Include="Models\Rooms\LayoutPlans\LayoutGeneratedElementsDto.cs" />
+    <Compile Include="Models\Rooms\LayoutPlans\LayoutWallSelectionDto.cs" />
+    <Compile Include="Models\Rooms\LayoutPlans\EquipmentPlacementValidationDto.cs" />
+    <Compile Include="Models\Rooms\LayoutPlans\RoomLayoutPlanDto.cs" />
+    <Compile Include="Models\Rooms\LayoutPlans\RoomLayoutPlanStorePayload.cs" />
+    <Compile Include="Models\Rooms\Semantic\LiftRecognitionRecord.cs" />
+    <Compile Include="Models\Rooms\Semantic\RoomLabel.cs" />
+    <Compile Include="Models\Rooms\Semantic\RoomSemanticRecord.cs" />
+    <Compile Include="Models\Rooms\Semantic\TargetRoomSeed.cs" />
+    <Compile Include="Models\Settings\GlobalGenerationSettings.cs" />
+    <Compile Include="Models\Mapping\AdvancedSettingsRow.cs" />
+    <Compile Include="Models\Mapping\JunctureSettings.cs" />
+    <Compile Include="Models\Mapping\MapCategory.cs" />
+    <Compile Include="Models\Mapping\MapRow.cs" />
+    <Compile Include="Models\Mapping\WizardGenerationTrackingModels.cs" />
+    <Compile Include="Models\Mapping\RowBuildResult.cs" />
+    <Compile Include="Models\Mapping\CleanupRowResult.cs" />
+    <Compile Include="Models\Mapping\SyncPlan.cs" />
+    <Compile Include="Models\Mapping\BeamCreateResult.cs" />
+    <Compile Include="Models\Mapping\ParameterOption.cs" />
+    <Compile Include="Models\Mapping\ParameterMapping.cs" />
+    <Compile Include="Models\Topology\TopologySettings.cs" />
+    <Compile Include="Models\Units\SourceUnit.cs" />
+    <Compile Include="Models\Units\UnitContext.cs" />
+    <Compile Include="Models\VerticalDimensionSettings.cs" />
+    <Compile Include="Models\WindowCandidate.cs" />
+    <Compile Include="Models\WindowCreateResult.cs" />
+    <Compile Include="Models\WindowCreateSettings.cs" />
+    <Compile Include="Models\WallCenterlineCandidate.cs" />
+    <Compile Include="Models\WallDetectResult.cs" />
+    <Compile Include="Models\WallDetectSettings.cs" />
+    <Compile Include="Models\WallRecognitionResult.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ResourceIcons.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>ResourceIcons.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Services\CadGeometryReader.cs" />
+    <Compile Include="Services\DwgImportService.cs" />
+    <Compile Include="Services\DwgSessionManager.cs" />
+    <Compile Include="Services\CadSegmentBuilder.cs" />
+    <Compile Include="Services\Config\WallRecognitionConfigDerived.cs" />
+    <Compile Include="Services\Config\GenerationGuardConfigProvider.cs" />
+    <Compile Include="Services\DoorCandidateDetector.cs" />
+    <Compile Include="Services\DoorCandidateLogWriter.cs" />
+    <Compile Include="Services\DoorPairingService.cs" />
+    <Compile Include="Services\DoorOpeningWidthResolver.cs" />
+    <Compile Include="Services\DoorCreatorService.cs" />
+    <Compile Include="Services\DoorWidthTestService.cs" />
+    <Compile Include="Services\IfcPathExportService.cs" />
+    <Compile Include="Services\BeamCreatorService.cs" />
+    <Compile Include="Services\LayerOverrideStoreService.cs" />
+    <Compile Include="Services\RoomRecognitionSettings.cs" />
+    <Compile Include="Services\WizardSessionCache.cs" />
+    <Compile Include="Services\WizardStateStoreService.cs" />
+    <Compile Include="Services\WizardIdempotencyStoreService.cs" />
+    <Compile Include="Services\WizardGenerationTrackingStoreService.cs" />
+    <Compile Include="Services\WizardGeneratedElementCleanupService.cs" />
+    <Compile Include="Services\GeneratedElementMetadataService.cs" />
+    <Compile Include="Services\DetachedGeneratedElementMetadataService.cs" />
+    <Compile Include="Services\DetachedElementVisualOverrideService.cs" />
+    <Compile Include="Services\DetachUndoStackService.cs" />
+    <Compile Include="Services\GeneratedElementBindingRestoreService.cs" />
+    <Compile Include="Services\ProjectSettingsStorageService.cs" />
+    <Compile Include="Services\VerticalDimensionStoreService.cs" />
+    <Compile Include="Services\RevitParameterSetters.cs" />
+    <Compile Include="Services\LayerNameMapper.cs" />
+    <Compile Include="Services\LayerNameResolver.cs" />
+    <Compile Include="Services\LayerStandardAnalyzer.cs" />
+    <Compile Include="Services\PreflightAnalyzer.cs" />
+    <Compile Include="Services\DynamicWallTypeService.cs" />
+    <Compile Include="Services\Join\WallJoinService.cs" />
+    <Compile Include="Services\Cad\CadDatasetBuilder.cs" />
+    <Compile Include="Services\Cad\CadTextBuilder.cs" />
+    <Compile Include="Services\Cad\CadDatasetScaler.cs" />
+    <Compile Include="Services\Dwg\DwgSourceUnitContext.cs" />
+    <Compile Include="Services\Dwg\DwgPathResolver.cs" />
+    <Compile Include="Services\Dwg\DwgRefreshService.cs" />
+    <Compile Include="Services\Dwg\DwgContextResetService.cs" />
+    <Compile Include="Services\Dwg\DwgTextReader.cs" />
+    <Compile Include="Services\Dwg\DwgTransformResolver.cs" />
+    <Compile Include="Services\Dwg\DwgUnitDetector.cs" />
+    <Compile Include="Services\Columns\ColumnCandidate.cs" />
+    <Compile Include="Services\Columns\ColumnCandidateDetector.cs" />
+    <Compile Include="Services\Columns\ColumnOrientationService.cs" />
+    <Compile Include="Services\Columns\ColumnRecognitionConfigProvider.cs" />
+    <Compile Include="Services\Columns\IWallDirectionProvider.cs" />
+    <Compile Include="Services\Columns\ColumnPlacementService.cs" />
+    <Compile Include="Services\Columns\IrregularColumnPlacementService.cs" />
+    <Compile Include="Services\Columns\RevitWallDirectionProvider.cs" />
+    <Compile Include="Services\Diagnostics\DiagnosticRecorder.cs" />
+    <Compile Include="Services\Diagnostics\DoorBatchFailuresPreprocessor.cs" />
+    <Compile Include="Services\Diagnostics\NonCriticalWarningsPreprocessor.cs" />
+    <Compile Include="Services\Diagnostics\WallBatchFailuresPreprocessor.cs" />
+    <Compile Include="Services\Diagnostics\ProfilingLogService.cs" />
+    <Compile Include="Services\Diagnostics\VerticalDimensionLogService.cs" />
+    <Compile Include="Services\CadRuntime\CadRuntimeStatus.cs" />
+    <Compile Include="Services\CadRuntime\CadRuntimeTarget.cs" />
+    <Compile Include="Services\CadRuntime\CadRuntimeInfo.cs" />
+    <Compile Include="Services\CadRuntime\CadRuntimeUserMessage.cs" />
+    <Compile Include="Services\CadRuntime\CadRuntimeDetector.cs" />
+    <Compile Include="Services\Common\ViewDisplayStyleHelper.cs" />
+    <Compile Include="Services\Common\ViewDisplayHelper.cs" />
+    <Compile Include="Services\PathObstacles\PathObstacleLocateService.cs" />
+    <Compile Include="Services\PathObstacles\PathObstacleMetadataService.cs" />
+    <Compile Include="Services\PathObstacles\PathObstacleStoreService.cs" />
+    <Compile Include="Services\NearestWallMatcher.cs" />
+    <Compile Include="Services\Preview\PreviewService.cs" />
+    <Compile Include="Services\Part3\LiftDoorIfcCleanupService.cs" />
+    <Compile Include="Services\Part3\LiftRoomDetectionService.cs" />
+    <Compile Include="Services\Part3\RvtDoorOpeningPostProcessor.cs" />
+    <Compile Include="Services\Part3\AhuTestRvtModelService.cs" />
+    <Compile Include="Services\Part3\RoomLinkedRvtPlacementService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewConstants.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewOrchestrator.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewTempFileService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewIfcExportService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewIfcOpenService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewExecutionScope.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewFailuresProcessingHandler.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewDialogSuppressor.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewLinkedModelService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewLinkedModelDisplayService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewLinkedRvtNormalizationService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewPreviewDocumentService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewIfcLinkService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewModelAnchorService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewMetadataService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewMaterialService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewGeometryBuilder.cs" />
+    <Compile Include="Services\PathPreview\DemoPathDataService.cs" />
+    <Compile Include="Services\PathPreview\MultiPathDemoDataService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewCoordinateCaptureService.cs" />
+    <Compile Include="Services\PathPreview\PathPreviewViewService.cs" />
+    <Compile Include="Services\PathPreview\Path3DVisualizationService.cs" />
+    <Compile Include="Services\PathPreview\CalculatePathApiService.cs" />
+    <Compile Include="Services\PathPreview\RoutePlannerSessionCacheService.cs" />
+    <Compile Include="Services\PathPreview\RoutePlannerAutoInitService.cs" />
+    <Compile Include="Services\RouteApi\RouteApiStatus.cs" />
+    <Compile Include="Services\RouteApi\RouteApiProcessService.cs" />
+    <Compile Include="Services\Rules\IDoorCandidateRule.cs" />
+    <Compile Include="Services\Rules\ArcDoorRule.cs" />
+    <Compile Include="Services\Rules\ArcDoorRuleAlt.cs" />
+    <Compile Include="Services\Rules\ArcDoorRuleMinimalDoubleNoWall.cs" />
+    <Compile Include="Services\Rules\ArcDoorRuleDoubleWithWallCrossing.cs" />
+    <Compile Include="Services\Rules\ArcDoorRuleComplexNoWall.cs" />
+    <Compile Include="Services\Rules\ArcDoorRuleComplexNoWallR3CD.cs" />
+    <Compile Include="Services\Rules\ParallelPairDoorRule.cs" />
+    <Compile Include="Services\Rules\SingleSegmentDoorRule.cs" />
+    <Compile Include="Services\WallCenterlineDetector.cs" />
+    <Compile Include="Services\WallRecognitionConfigProvider.cs" />
+    <Compile Include="Services\WallRecognitionEngine.cs" />
+    <Compile Include="Services\Topology\WallTopologyRefiner.cs" />
+    <Compile Include="Services\Units\UnitScaleResolver.cs" />
+    <Compile Include="Services\WindowCandidateBuilder.cs" />
+    <Compile Include="Services\WindowCreatorService.cs" />
+    <Compile Include="Services\WindowLoggerService.cs" />
+    <Compile Include="Services\Ceiling\CeilingAutoCreateService.cs" />
+    <Compile Include="Services\Ceiling\CeilingBoundaryRepairService.cs" />
+    <Compile Include="Services\Ceiling\CeilingDetectionService.cs" />
+    <Compile Include="Services\Rooms\ModelRoomSeedRecognitionService.cs" />
+    <Compile Include="Services\Rooms\AnalyzeRoomsLevelResolver.cs" />
+    <Compile Include="Services\Rooms\RoomBoundaryLoopService.cs" />
+    <Compile Include="Services\Rooms\PointInPolygon.cs" />
+    <Compile Include="Services\Rooms\RoomLabelParser.cs" />
+    <Compile Include="Services\Rooms\RoomSemanticPipeline.cs" />
+    <Compile Include="Services\Rooms\TargetRoomLocalDetector.cs" />
+    <Compile Include="Services\Rooms\RoomSemanticStorageService.cs" />
+    <Compile Include="Services\Rooms\RevitRoomCreateService.cs" />
+    <Compile Include="Services\Rooms\RevitFocusService.cs" />
+    <Compile Include="Services\Rooms\RevitRoomSemanticFocusService.cs" />
+    <Compile Include="Services\Rooms\TargetRoomSeedStorageService.cs" />
+    <Compile Include="Services\Rooms\TargetRoomSeedExtractor.cs" />
+    <Compile Include="Services\Rooms\TargetRoomSeedDebugVisualizerService.cs" />
+    <Compile Include="Services\Rooms\RoomCustomFamilyCatalogFileService.cs" />
+    <Compile Include="Services\Rooms\RoomCustomFamilyCatalogService.cs" />
+    <Compile Include="Services\Rooms\RoomCustomFamilyCatalogValidator.cs" />
+    <Compile Include="Services\Rooms\RoomCustomFamilyPlacementService.cs" />
+    <Compile Include="Services\Rooms\RoomFlexDuctService.cs" />
+    <Compile Include="Services\Rooms\RoomBoundaryWallResolver.cs" />
+    <Compile Include="Services\Rooms\RoomRigidDuctService.cs" />
+    <Compile Include="Services\Rooms\RoomPipeSystemService.cs" />
+    <Compile Include="Services\Rooms\ConnectivitySizeOptionsStorageService.cs" />
+    <Compile Include="Services\Rooms\DeliveryRoutes\DeliveryRouteStorageService.cs" />
+    <Compile Include="Services\Rooms\RoomPointProbeService.cs" />
+    <Compile Include="Services\Rooms\Manual\ManualRoomBoundaryBuilder.cs" />
+    <Compile Include="Services\Rooms\Manual\ManualRoomDoorValidator.cs" />
+    <Compile Include="Services\Rooms\Manual\ManualRoomDuplicateValidator.cs" />
+    <Compile Include="Services\Rooms\Manual\ManualRoomRecord.cs" />
+    <Compile Include="Services\Rooms\Manual\ManualRoomStorageService.cs" />
+    <Compile Include="Services\Rooms\Manual\ManualRoomValidationRoomInfo.cs" />
+    <Compile Include="Services\Rooms\EquipmentValidation\AhuPlacementValidationService.cs" />
+    <Compile Include="Services\Rooms\EquipmentValidation\AhuEquipmentLayoutCatalogService.cs" />
+    <Compile Include="Services\ExportDrawing\ExportDrawingModels.cs" />
+    <Compile Include="Services\ExportDrawing\ExportDrawingImageService.cs" />
+    <Compile Include="Services\ExportDrawing\ExportDrawingPdfService.cs" />
+    <Compile Include="Services\Rooms\LayoutPlans\RoomLayoutPlanStorageService.cs" />
+    <Compile Include="Services\Rooms\LayoutPlans\AhuSubModuleScheduleService.cs" />
+    <Compile Include="Services\Rooms\LayoutPlans\RoomLayoutPlanImageExportService.cs" />
+    <Compile Include="Services\Rooms\LayoutPlans\RoomLayoutPlanPdfFontResolver.cs" />
+    <Compile Include="Services\Rooms\LayoutPlans\RoomLayoutPlanPdfExportService.cs" />
+    <Compile Include="Services\Rooms\LayoutPlanReports\LayoutPlanReportModels.cs" />
+    <Compile Include="Services\Rooms\LayoutPlanReports\LayoutPlanReportDataService.cs" />
+    <Compile Include="Services\Rooms\LayoutPlanReports\LayoutPlanReportImageExportService.cs" />
+    <Compile Include="Services\Rooms\LayoutPlanReports\LayoutPlanReportPdfExportService.cs" />
+    <Compile Include="Models\PathObstacleRecord.cs" />
+    <Compile Include="Services\Rooms\Lifts\Lift3DVisualizationService.cs" />
+    <Compile Include="Services\Rooms\Lifts\ManualLiftRecordBuilder.cs" />
+    <Compile Include="Services\Rooms\Lifts\LiftRecognitionStorageService.cs" />
+    <Compile Include="Services\Rooms\Lifts\LiftDisplayOverrideStorageService.cs" />
+    <Compile Include="Services\Rooms\Lifts\LiftSeedExtractor.cs" />
+    <Compile Include="Services\Rooms\ModelBoundaryCollector.cs" />
+    <Compile Include="Services\Rooms\ModelBoundarySegmentBuilder.cs" />
+    <Compile Include="Services\Rooms\DoorClosureBuilder.cs" />
+    <Compile Include="Services\Rooms\ModelFloodFillService.cs" />
+    <Compile Include="Services\Rooms\GridContourExtractor.cs" />
+    <Compile Include="Services\Rooms\RoomAutoAnalyzeService.cs" />
+    <Compile Include="Services\Rooms\RoomRecognitionNameOverrideStorageService.cs" />
+    <Compile Include="Services\Rooms\RoomRangeVisualizationService.cs" />
+    <Compile Include="Services\Rooms\TargetRoomModelRecognitionService.cs" />
+    <Compile Include="Services\Rooms\Room3DVisualizationConstants.cs" />
+    <Compile Include="Services\Rooms\Room3DVisualizationIfcCleanupService.cs" />
+    <Compile Include="Services\Rooms\Room3DVisualizationMetadataService.cs" />
+    <Compile Include="Services\Rooms\Room3DVisualizationMaterialService.cs" />
+    <Compile Include="Services\Rooms\Room3DVisualizationGeometryBuilder.cs" />
+    <Compile Include="Services\Rooms\Room3DVisualizationTextService.cs" />
+    <Compile Include="Services\Rooms\Room3DVisualizationService.cs" />
+    <Compile Include="Infrastructure\Localization\Loc.cs" />
+    <Compile Include="Infrastructure\Localization\LocalizationService.cs" />
+    <Compile Include="Infrastructure\Localization\LocalizedKeys.cs" />
+    <Compile Include="Infrastructure\Localization\RevitLanguageMapper.cs" />
+    <Compile Include="Infrastructure\UI\LocalizedDialogService.cs" />
+    <Compile Include="Infrastructure\UI\UiMessageService.cs" />
+    <Compile Include="Services\Workflow\ProjectWorkflowModeStoreService.cs" />
+    <Compile Include="UI\CadToRevitWizardForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Dialogs\HelpCenterWindow.cs" />
+    <Compile Include="UI\HelpNoticeWindow.cs" />
+    <Compile Include="UI\Common\BusyProgressWindow.cs" />
+    <Compile Include="UI\Dialogs\LayoutPlanPdfPreviewWindow.cs" />
+    <Compile Include="UI\Dialogs\LayoutPlanReportPdfPreviewWindow.cs" />
+    <Compile Include="UI\Dialogs\ExportDrawingPdfPreviewWindow.cs" />
+    <Compile Include="UI\PathObstacles\PathObstacleConfirmWindow.cs" />
+    <Compile Include="UI\PathObstacles\PathObstacleDrawingBarWindow.cs" />
+    <Compile Include="UI\PathObstacles\PathObstacleEditNameWindow.cs" />
+    <Compile Include="UI\PathObstacles\PathObstacleExternalEventHandler.cs" />
+    <Compile Include="UI\PathObstacles\PathObstacleExternalEventRequest.cs" />
+    <Compile Include="UI\PathObstacles\PathObstacleManagerViewModel.cs" />
+    <Compile Include="UI\PathObstacles\PathObstacleManagerWindow.cs" />
+    <Compile Include="UI\PathObstacles\PathObstaclePaneProvider.cs" />
+    <Compile Include="UI\PathObstacles\PathObstaclePaneViewModel.cs" />
+    <Compile Include="UI\Windows\DwgSourceUnitSelectionWindow.cs" />
+    <Compile Include="UI\Windows\SaveManualRoomWindow.cs" />
+    <Compile Include="UI\PathObstacles\PathObstacleNameWindow.cs" />
+    <Compile Include="UI\PathObstacles\PathObstacleNoticeWindow.cs" />
+    <Compile Include="UI\PathObstacles\PathObstacleRuntime.cs" />
+    <Compile Include="UI\DwgRefreshStatusWindow.cs" />
+    <Compile Include="UI\Part3\ModelImportReviewWindow.cs" />
+    <Compile Include="UI\Part3\Part3MessageWindow.cs" />
+    <Compile Include="UI\CadToRevitHelixForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\AdvancedSettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\GlobalSettingsViewModel.cs" />
+    <Compile Include="UI\GlobalSettingsWindow.cs" />
+    <Compile Include="UI\FamilyLibraryManagerViewModel.cs" />
+    <Compile Include="UI\FamilyLibraryManagerWindow.cs" />
+    <Compile Include="UI\Dockable\PreviewPaneViewModel.cs" />
+    <Compile Include="UI\Dockable\PreviewPaneExternalEventHandler.cs" />
+    <Compile Include="UI\Dockable\PreviewPaneProvider.cs" />
+    <Compile Include="UI\Dockable\PreviewPaneRuntime.cs" />
+    <Compile Include="UI\Dockable\PreviewPaneModels.cs" />
+    <Compile Include="UI\Dockable\ManualRoomMessageWindow.cs" />
+    <Compile Include="UI\Dockable\ManualRoomSelectionBarWindow.cs" />
+    <Compile Include="UI\Dockable\RoomRecognitionDeleteConfirmWindow.cs" />
+    <Compile Include="UI\Dockable\EditConnectivitySizeWindow.cs" />
+    <Compile Include="UI\Dockable\LiftEditWindow.cs" />
+    <Compile Include="UI\Dockable\RoomRecognitionNameEditWindow.cs" />
+    <Compile Include="UI\Dockable\RoomRecognitionPaneModels.cs" />
+    <Compile Include="UI\Dockable\RoomRecognitionPaneRuntime.cs" />
+    <Compile Include="UI\Dockable\RoomRecognitionExternalEventHandler.cs" />
+    <Compile Include="UI\Dockable\LiftListItemViewModel.cs" />
+    <Compile Include="UI\Dockable\DeliveryRouteConfirmWindow.cs" />
+    <Compile Include="UI\Dockable\DeliveryRouteLoadingWindow.cs" />
+    <Compile Include="UI\Dockable\DeliveryRoutePaneProvider.cs" />
+    <Compile Include="UI\Dockable\DeliveryRoutePaneRuntime.cs" />
+    <Compile Include="UI\Dockable\DeliveryRoutePaneViewModel.cs" />
+    <Compile Include="UI\Dockable\RoomListPaneProvider.cs" />
+    <Compile Include="UI\Dockable\RoomListPaneViewModel.cs" />
+    <Compile Include="UI\Dockable\RoomListItemViewModel.cs" />
+    <Compile Include="UI\Dockable\RoomDetailPaneProvider.cs" />
+    <Compile Include="UI\Dockable\RoomDetailPaneViewModel.cs" />
+    <Compile Include="UI\Dockable\EditorLiftOptionViewModel.cs" />
+    <Compile Include="UI\Dockable\CreateLayoutContextWindow.cs" />
+    <Compile Include="UI\Dockable\RoomCustomFamilyItemViewModel.cs" />
+    <Compile Include="UI\Dockable\PreviewPaneDataService.cs" />
+    <Compile Include="UI\Dockable\PreviewGenerationProgressWindow.cs" />
+    <Compile Include="UI\Dockable\LayerAnalysisResultWindow.xaml.cs" />
+    <Compile Include="UI\RouteApi\RouteApiConsoleWindow.cs" />
+    <Compile Include="UI\TargetRoomRecognitionResultForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\RoomRecognitionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\CreateCeilingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\GenerationProgressForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Doc\Notice_CHS.txt" />
+    <Content Include="Doc\Notice_CHT.txt" />
+    <Content Include="Doc\Notice_ENU.txt" />
+    <Content Include="AHUFamilyType\catalog.json" />
+    <None Include="AHUFamilyType\AHU with Flow rate 1 m3 per s.rfa">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="AHUFamilyType\AHU with Flow rate 10 m3 per s.rfa">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="AHUFamilyType\AHU with Flow rate 2 m3 per s.rfa">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="AHUFamilyType\AHU with Flow rate 3 m3 per s.rfa">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="AHUFamilyType\AHU with Flow rate 4 m3 per s.rfa">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="AHUFamilyType\AHU with Flow rate 5 m3 per s.rfa">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="AHUFamilyType\AHU with Flow rate 6 m3 per s.rfa">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="AHUFamilyType\AHU with Flow rate 7 m3 per s.rfa">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="AHUFamilyType\AHU with Flow rate 8 m3 per s.rfa">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="AHUFamilyType\AHU with Flow rate 9 m3 per s.rfa">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+    <Content Include="GenerationGuardConfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ColumnRecognitionConfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Help\css\help.css" />
+    <Content Include="Help\index.html" />
+    <Content Include="Help\js\help.js" />
+    <Content Include="Images\1.png" />
+    <Content Include="Images\pdf3.png" />
+    <Content Include="layer-mapping.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\AHU.png" />
+    <Content Include="Resources\ProjectInit.png" />
+    <Content Include="Resources\RoutePlanner.png" />
+    <Content Include="Resources\Settings.png" />
+    <Content Include="WallRecognitionConfig.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Include="PipeAccessoryFamilyType\Globe Valve - 0.375-2 Inch - Threaded.rfa">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="RevitLinkInstance\内置管道 - 复制.rvt" />
+    <None Include="RevitLinkInstance\内置管道.rvt" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ResourceIcons.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>ResourceIcons.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\Strings.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+      <CustomToolNamespace>CadToRevit.Resources</CustomToolNamespace>
+      <LogicalName>CadToRevit.Resources.Strings.resources</LogicalName>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\Strings.zh-Hans.resx">
+      <DependentUpon>Strings.resx</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\Strings.zh-Hant.resx">
+      <DependentUpon>Strings.resx</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup />
+  <Target Name="CopyLocalizationResxFiles" AfterTargets="CoreCompile;Compile;Build">
+    <MakeDir Directories="$(OutputPath)Resources" />
+    <Copy SourceFiles="Resources\Strings.resx" DestinationFiles="$(OutputPath)Resources\Strings.resx" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="Resources\Strings.zh-Hans.resx" DestinationFiles="$(OutputPath)Resources\Strings.zh-Hans.resx" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="Resources\Strings.zh-Hant.resx" DestinationFiles="$(OutputPath)Resources\Strings.zh-Hant.resx" SkipUnchangedFiles="true" />
+  </Target>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\packages\Microsoft.Web.WebView2.1.0.2365.46\build\Microsoft.Web.WebView2.targets" Condition="Exists('..\packages\Microsoft.Web.WebView2.1.0.2365.46\build\Microsoft.Web.WebView2.targets')" />
+</Project>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>CadToRevit</Name>
+    <Assembly>D:\EMSDRevitPlugs\Solution\CadToRevit\CadToRevit\bin\Debug\CadToRevit.dll</Assembly>
+    <AddInId>9D6B1A41-2546-4F73-98A4-2E0A0C6D1D91</AddInId>
+    <FullClassName>CadToRevit.App</FullClassName>
+    <VendorId>EMSD</VendorId>
+    <VendorDescription>CadToRevit minimal test add-in</VendorDescription>
+  </AddIn>
+</RevitAddIns>
