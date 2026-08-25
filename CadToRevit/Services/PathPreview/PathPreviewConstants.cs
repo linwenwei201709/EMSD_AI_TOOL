@@ -37,6 +37,10 @@ namespace CadToRevit.Services.PathPreview
         internal const double PathBoxWidthMm = 1100.0;
         internal const double PathBoxHeightMm = 1700.0;
         internal const double PathBoxSpacingMm = 1050.0;
+        // Coordinate markers are a visual aid only. Keep one approximately
+        // every metre so long routes remain readable without changing the
+        // route geometry or the backend path points.
+        internal const double PathPointMarkerSpacingMm = 1000.0;
 
         internal const double ArrowLengthMm = 500.0;
         internal const double ArrowWidthMm = 240.0;

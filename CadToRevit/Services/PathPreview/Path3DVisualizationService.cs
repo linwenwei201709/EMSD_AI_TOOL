@@ -258,15 +258,48 @@ namespace CadToRevit.Services.PathPreview
 
             int count = 0;
             string pathId = string.IsNullOrWhiteSpace(path.PathId) ? "DELIVERY_ROUTE" : path.PathId;
+            double distanceSinceMarkerMm = 0.0;
             for (int i = 0; i < path.Points.Count; i++)
             {
+                if (i > 0)
+                {
+                    distanceSinceMarkerMm += DistanceMillimeters(path.Points[i - 1], path.Points[i]);
+                }
+
+                // Keep the endpoints visible and sample intermediate points
+                // at approximately one-metre intervals. The route boxes still
+                // use every backend point; only the diagnostic markers are
+                // thinned for readability and Revit performance.
+                bool isEndpoint = i == 0 || i == path.Points.Count - 1;
+                bool isSpacingSample = distanceSinceMarkerMm >= PathPreviewConstants.PathPointMarkerSpacingMm;
+                if (!isEndpoint && !isSpacingSample)
+                {
+                    continue;
+                }
+
                 count += DrawPathCoordinateMarker(doc, view3D, path, pathId, i, path.Points[i], materialId, result);
+                distanceSinceMarkerMm = 0.0;
             }
 
             DiagnosticRecorder.AppendDebug(
                 "[PathPreview] CoordinateMarkers PathId=" + pathId +
-                ", Count=" + count.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                ", Count=" + count.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                ", SourcePointCount=" + path.Points.Count.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                ", SpacingMm=" + PathPreviewConstants.PathPointMarkerSpacingMm.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture));
             return count;
+        }
+
+        private static double DistanceMillimeters(PathPoint3D first, PathPoint3D second)
+        {
+            if (first == null || second == null)
+            {
+                return 0.0;
+            }
+
+            double dx = second.X - first.X;
+            double dy = second.Y - first.Y;
+            double dz = second.Z - first.Z;
+            return Math.Sqrt((dx * dx) + (dy * dy) + (dz * dz));
         }
 
         private static int DrawPathCoordinateMarker(Document doc, View3D view3D, PathPolyline path, string pathId, int pointIndex, PathPoint3D point, ElementId materialId, DrawResult result)

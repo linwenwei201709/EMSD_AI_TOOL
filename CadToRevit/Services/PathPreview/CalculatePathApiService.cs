@@ -378,7 +378,7 @@ namespace CadToRevit.Services.PathPreview
         public static bool DrawPathFromResponse(Document doc, UIDocument uiDoc, string responseText)
         {
             CalculatePathResponseDto response = DeserializeResponse(responseText);
-            List<PathPolyline> paths = BuildTransportGroupPathPolylines(response);
+            List<PathPolyline> paths = BuildDisplayPathPolylines(response);
             if (paths.Count == 0)
             {
                 PathPolyline fallback = BuildPathPolyline(response);
@@ -461,10 +461,10 @@ namespace CadToRevit.Services.PathPreview
                 return CreateFailure("Please open a 3D view before generating delivery route.", responseText, response.PathLengthMeters);
             }
 
-            List<PathPolyline> paths = BuildTransportGroupPathPolylines(response);
+            List<PathPolyline> transportPaths = BuildTransportGroupPathPolylines(response);
             if (response.NeedCut == true && response.CutOptions != null &&
                 response.CutOptions.Groups != null &&
-                paths.Count != response.CutOptions.Groups.Count)
+                transportPaths.Count != response.CutOptions.Groups.Count)
             {
                 return CreateFailure(
                     "The backend selected disassembly but did not return a complete set of drawable transport paths.",
@@ -472,6 +472,7 @@ namespace CadToRevit.Services.PathPreview
                     response.PathLengthMeters,
                     response);
             }
+            List<PathPolyline> paths = SelectLargestDisplayPath(transportPaths);
             if (paths.Count == 0)
             {
                 PathPolyline fallback = BuildPathPolyline(response);
@@ -987,6 +988,67 @@ namespace CadToRevit.Services.PathPreview
             }
 
             return result;
+        }
+
+        private static List<PathPolyline> BuildDisplayPathPolylines(CalculatePathResponseDto response)
+        {
+            return SelectLargestDisplayPath(BuildTransportGroupPathPolylines(response));
+        }
+
+        private static List<PathPolyline> SelectLargestDisplayPath(IList<PathPolyline> paths)
+        {
+            if (paths == null || paths.Count <= 1)
+            {
+                return paths == null
+                    ? new List<PathPolyline>()
+                    : paths.ToList();
+            }
+
+            int largestIndex = 0;
+            for (int i = 1; i < paths.Count; i++)
+            {
+                if (CompareDisplayPathSize(paths[i], paths[largestIndex]) > 0)
+                {
+                    largestIndex = i;
+                }
+            }
+
+            PathPolyline selected = paths[largestIndex];
+            DiagnosticRecorder.AppendDebug(
+                "[CalculatePathApi] Preview displays largest transport group only. " +
+                "SelectedIndex=" + largestIndex.ToString(CultureInfo.InvariantCulture) +
+                ", GroupCount=" + paths.Count.ToString(CultureInfo.InvariantCulture) +
+                ", PathId=" + (selected == null ? string.Empty : selected.PathId ?? string.Empty) +
+                ", DimensionsMm=[" +
+                (selected == null ? "0" : selected.BoxLengthMm.ToString("0.###", CultureInfo.InvariantCulture)) + "," +
+                (selected == null ? "0" : selected.BoxWidthMm.ToString("0.###", CultureInfo.InvariantCulture)) + "," +
+                (selected == null ? "0" : selected.BoxHeightMm.ToString("0.###", CultureInfo.InvariantCulture)) + "]");
+
+            return selected == null
+                ? new List<PathPolyline>()
+                : new List<PathPolyline> { selected };
+        }
+
+        private static int CompareDisplayPathSize(PathPolyline left, PathPolyline right)
+        {
+            if (left == null)
+            {
+                return right == null ? 0 : -1;
+            }
+            if (right == null)
+            {
+                return 1;
+            }
+
+            // Match the backend's largest-segment convention: length is the
+            // primary dimension, followed by width and height as tie-breakers.
+            int comparison = left.BoxLengthMm.CompareTo(right.BoxLengthMm);
+            if (comparison != 0)
+            {
+                return comparison;
+            }
+            comparison = left.BoxWidthMm.CompareTo(right.BoxWidthMm);
+            return comparison != 0 ? comparison : left.BoxHeightMm.CompareTo(right.BoxHeightMm);
         }
 
         private static bool IsAcceptedTransportVerificationStatus(string verificationStatus)

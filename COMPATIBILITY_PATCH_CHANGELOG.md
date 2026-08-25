@@ -1,5 +1,16 @@
 # Colleague Frontend Compatibility Patch
 
+## 2026-08-25 - Reduce path preview clutter and display the largest transport group
+
+- Route preview now keeps the backend route geometry unchanged but displays
+  only the largest verified transport group when a disassembly response
+  contains multiple groups. Length is the primary size comparison, followed
+  by width and height, matching the backend largest-segment convention.
+- Coordinate markers are sampled at approximately 1,000 IFC millimetres along
+  each displayed path, while the first and last points remain visible. The
+  route boxes still use every backend path point, so this is a visualization
+  change only and does not alter route calculation or verification.
+
 ## 2026-08-25 - Feed imported-DWG door candidates into room fit
 
 - `UI/Dockable/RoomRecognitionPaneRuntime.cs` now keeps the existing native
