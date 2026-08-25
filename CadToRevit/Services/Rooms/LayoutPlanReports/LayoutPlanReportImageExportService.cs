@@ -33,11 +33,9 @@ namespace CadToRevit.Services.Rooms.LayoutPlanReports
             try
             {
                 ViewPlan preferredPlanView = uiDoc.ActiveView as ViewPlan;
-                // Export the Key Plan before Page 2.  The successful TOP-3D Key Plan is also
-                // reused as a transparent room/layout overlay on the architectural Overall Top
-                // image.  This keeps Page 2 as the real FloorPlan (grids, text and drawing
-                // graphics stay intact) while still showing AHU + SAD/RAD + CHWS/CHWR even
-                // when the AHU family has no usable 2D plan representation.
+                // Export both TOP views before composing the PDF. In the current report layout:
+                // - OverallTop becomes the compact Key Plan on Page 1.
+                // - KeyPlan becomes the dedicated room-detail TOP view on Page 2 at target 1:50.
                 string main3DImagePath = ExportMain3D(doc, tempDirectory, plan, temporaryMep.ElementIds);
                 string keyPlanImagePath = ExportKeyPlan(doc, tempDirectory, plan, preferredPlanView, temporaryMep.ElementIds);
                 string overallTopViewImagePath = ExportOverallTop(
@@ -171,7 +169,9 @@ namespace CadToRevit.Services.Rooms.LayoutPlanReports
 
                     tempView.Name = "EMSD_TEMP_LAYOUT_REPORT_KEY_" + DateTime.Now.ToString("HHmmssfff");
 
-                    BoundingBoxXYZ sectionBox = BuildKeyPlan3DSectionBox(doc, source, plan, temporaryMepElementIds, 146.0 / 94.0);
+                    // Page 2 uses the full A2 content frame (562 x 388 mm). Build the room-detail
+                    // crop to exactly the same aspect ratio so the PDF does not add letterboxing.
+                    BoundingBoxXYZ sectionBox = BuildKeyPlan3DSectionBox(doc, source, plan, temporaryMepElementIds, 562.0 / 388.0);
                     if (sectionBox == null)
                     {
                         tx.RollBack();
@@ -190,6 +190,21 @@ namespace CadToRevit.Services.Rooms.LayoutPlanReports
                     XYZ eye = new XYZ(center.X, center.Y, sectionBox.Max.Z + Math.Max(xySpan, ToFeet(6000.0)));
 
                     tempView.SetOrientation(new ViewOrientation3D(eye, XYZ.BasisY, new XYZ(0.0, 0.0, -1.0)));
+
+                    // Client requirement: the room-detail drawing on Page 2 is a 1:50 plan.
+                    // View.Scale is also set so Revit view-dependent graphics follow 1:50 semantics.
+                    // The section/crop box below is calibrated to the physical PDF content size,
+                    // which preserves the same 1:50 model-to-paper ratio after raster placement.
+                    try
+                    {
+                        tempView.Scale = 50;
+                    }
+                    catch (Exception ex)
+                    {
+                        DiagnosticRecorder.AppendDebug(
+                            "[LayoutPlanReport] Room detail View.Scale=50 skipped: " + ex.Message);
+                    }
+
                     tempView.IsSectionBoxActive = true;
                     tempView.SetSectionBox(sectionBox);
                     doc.Regenerate();
@@ -201,8 +216,8 @@ namespace CadToRevit.Services.Rooms.LayoutPlanReports
                     tx.Commit();
                 }
 
-                string path = ExportView(doc, doc.GetElement(tempViewId) as View, tempDirectory, "key_plan", 1800);
-                DiagnosticRecorder.AppendDebug("[LayoutPlanReport] KeyPlan TOP-3D exported. Path=" + (path ?? string.Empty));
+                string path = ExportView(doc, doc.GetElement(tempViewId) as View, tempDirectory, "room_detail_top_1_50", 3600);
+                DiagnosticRecorder.AppendDebug("[LayoutPlanReport] Room detail TOP-3D (target 1:50) exported. Path=" + (path ?? string.Empty));
                 return path;
             }
             finally
@@ -260,7 +275,7 @@ namespace CadToRevit.Services.Rooms.LayoutPlanReports
                         tempView,
                         plan,
                         temporaryMepElementIds,
-                        562.0 / 388.0);
+                        146.0 / 94.0);
                     BoundingBoxXYZ dwgBox = GetModelBox(primaryDwg, tempView);
                     BoundingBoxXYZ roomBox = CollectRoomVisualizationBox(doc, tempView, plan);
                     BoundingBoxXYZ layoutBox = CollectSavedLayoutElementBox(doc, tempView, plan, temporaryMepElementIds);
@@ -357,8 +372,8 @@ namespace CadToRevit.Services.Rooms.LayoutPlanReports
                     doc,
                     doc.GetElement(tempViewId) as View,
                     tempDirectory,
-                    "overall_top",
-                    3600);
+                    "overall_top_keyplan",
+                    1800);
                 DiagnosticRecorder.AppendDebug(
                     "[LayoutPlanReport] OverallTop unified TOP-3D exported. Path=" + (path ?? string.Empty));
                 return path;
@@ -1056,14 +1071,49 @@ namespace CadToRevit.Services.Rooms.LayoutPlanReports
                 return null;
             }
 
-            // The room drives XY framing. Saved AHU/MEP geometry is used only for Z so a long
-            // duct/pipe run cannot zoom the Key Plan out. 1.3 m around the room gives the same
-            // visual breathing room as the prototype: full room visible, but not edge-to-edge.
-            double minX = basis.Min.X - ToFeet(1300.0);
-            double maxX = basis.Max.X + ToFeet(1300.0);
-            double minY = basis.Min.Y - ToFeet(1300.0);
-            double maxY = basis.Max.Y + ToFeet(1300.0);
-            ExpandXyToAspect(ref minX, ref maxX, ref minY, ref maxY, aspect);
+            // Page 2 is an A2 room-detail drawing at 1:50. The PDF image content area is
+            // 562 x 388 mm, therefore a true 1:50 viewport corresponds to 28,100 x 19,400 mm
+            // in model space. Centre that fixed-size viewport on the selected room.
+            const double targetScale = 50.0;
+            const double paperContentWidthMm = 562.0;
+            const double paperContentHeightMm = 388.0;
+            double targetWidth = ToFeet(paperContentWidthMm * targetScale);
+            double targetHeight = ToFeet(paperContentHeightMm * targetScale);
+
+            // Keep the requested aspect parameter authoritative in case the PDF frame changes
+            // later. For the current 562/388 frame this is already exact.
+            double targetAspect = aspect > 1e-9 ? aspect : (paperContentWidthMm / paperContentHeightMm);
+            if (Math.Abs((targetWidth / targetHeight) - targetAspect) > 1e-6)
+            {
+                targetHeight = targetWidth / targetAspect;
+            }
+
+            double centerX = (basis.Min.X + basis.Max.X) * 0.5;
+            double centerY = (basis.Min.Y + basis.Max.Y) * 0.5;
+            double minX = centerX - targetWidth * 0.5;
+            double maxX = centerX + targetWidth * 0.5;
+            double minY = centerY - targetHeight * 0.5;
+            double maxY = centerY + targetHeight * 0.5;
+
+            // A very large room cannot physically fit on the A2 content frame at 1:50. Avoid
+            // clipping in that exceptional case by expanding only as much as necessary and log
+            // that the effective printed scale will be smaller than 1:50.
+            const double safetyMarginMm = 300.0;
+            double requiredWidth = (basis.Max.X - basis.Min.X) + (2.0 * ToFeet(safetyMarginMm));
+            double requiredHeight = (basis.Max.Y - basis.Min.Y) + (2.0 * ToFeet(safetyMarginMm));
+            if (requiredWidth > targetWidth || requiredHeight > targetHeight)
+            {
+                double fitScale = Math.Max(requiredWidth / targetWidth, requiredHeight / targetHeight);
+                targetWidth *= fitScale;
+                targetHeight *= fitScale;
+                minX = centerX - targetWidth * 0.5;
+                maxX = centerX + targetWidth * 0.5;
+                minY = centerY - targetHeight * 0.5;
+                maxY = centerY + targetHeight * 0.5;
+                DiagnosticRecorder.AppendDebug(
+                    "[LayoutPlanReport] Room detail exceeds A2 1:50 viewport; expanded to avoid clipping. " +
+                    "Effective scale is smaller than 1:50. FitFactor=" + fitScale.ToString("F4"));
+            }
 
             BoundingBoxXYZ zBox = Union(roomBox, layoutBox) ?? basis;
             double minZ = zBox.Min.Z - ToFeet(600.0);
@@ -1080,7 +1130,7 @@ namespace CadToRevit.Services.Rooms.LayoutPlanReports
             };
 
             DiagnosticRecorder.AppendDebug(
-                "[LayoutPlanReport] KeyPlan TOP-3D section box. Room=" + FormatBox(roomBox) +
+                "[LayoutPlanReport] Room detail TOP-3D section box (target 1:50). Room=" + FormatBox(roomBox) +
                 ", Layout=" + FormatBox(layoutBox) +
                 ", Result=" + FormatBox(result));
             return result;

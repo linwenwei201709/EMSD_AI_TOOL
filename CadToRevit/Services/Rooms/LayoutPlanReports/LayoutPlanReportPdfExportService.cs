@@ -100,7 +100,8 @@ namespace CadToRevit.Services.Rooms.LayoutPlanReports
 
             XRect keyRect = RectMm(232, 290, 150, 110);
             DrawSectionBox(gfx, "Key Plan", keyRect, sectionFont, borderPen);
-            DrawImageOrPlaceholder(gfx, context.KeyPlanImagePath, Inset(keyRect, Mm(2), Mm(14), Mm(2), Mm(2)), "Key Plan unavailable.", false);
+            // The former full-page Overall Top view is now used as the compact Key Plan on Page 1.
+            DrawImageOrPlaceholder(gfx, context.OverallTopViewImagePath, Inset(keyRect, Mm(2), Mm(14), Mm(2), Mm(2)), "Key Plan unavailable.", false);
 
             // Keep all three lower panels on exactly the same top/bottom grid line.
             // The previous title block started at Y=238 mm while Room Information and
@@ -115,8 +116,10 @@ namespace CadToRevit.Services.Rooms.LayoutPlanReports
         {
             XPen borderPen = new XPen(XColors.Black, 0.75);
             gfx.DrawRectangle(borderPen, RectMm(10, 10, 574, 400));
-            DrawImageOrPlaceholder(gfx, context.OverallTopViewImagePath, RectMm(16, 16, 562, 388), "Overall Top View unavailable.", false);
-            CadToRevit.Services.Diagnostics.DiagnosticRecorder.AppendDebug("[LayoutPlanReport] PDF page2 created.");
+            // Page 2 is now the dedicated room-detail TOP view. The image exporter prepares this
+            // view for 1:50 output and the PDF keeps the full A2 content frame for it.
+            DrawImageOrPlaceholder(gfx, context.KeyPlanImagePath, RectMm(16, 16, 562, 388), "Room Detail Top View unavailable.", false);
+            CadToRevit.Services.Diagnostics.DiagnosticRecorder.AppendDebug("[LayoutPlanReport] PDF page2 room detail created at target scale 1:50.");
         }
 
         private static void DrawSchedule(XGraphics gfx, List<LayoutPlanReportScheduleRow> rows, XRect rect, XFont titleFont, XFont headerFont, XFont textFont, XPen pen)

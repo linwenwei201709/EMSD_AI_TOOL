@@ -1,4 +1,4 @@
-using CadToRevit.Infrastructure.Localization;
+﻿using CadToRevit.Infrastructure.Localization;
 using CadToRevit.Services;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,7 +35,7 @@ namespace CadToRevit.UI.Dockable
             StackPanel host = new StackPanel { Margin = new Thickness(16) };
             scroll.Content = host;
 
-            host.Children.Add(BuildCollapsibleSection(Loc.T("LayerAnalysis.StandardTitle"), data.RuleDescriptions, false));
+            host.Children.Add(BuildCollapsibleSection(data.StandardTitle, data.RuleDescriptions, false));
             host.Children.Add(BuildSection(data.DwgLine, new[] { Loc.T("LayerAnalysis.ValidationCompleted"), data.SummaryLine }));
             host.Children.Add(BuildSection(Loc.T("LayerAnalysis.ValidLayers"), data.ValidDisplayLines));
             host.Children.Add(BuildSection(Loc.T("LayerAnalysis.InvalidLayers"), data.InvalidDisplayLines, includeBottomMargin: false));
@@ -180,6 +180,7 @@ namespace CadToRevit.UI.Dockable
 
         private sealed class LayerAnalysisResultViewData
         {
+            public string StandardTitle { get; set; }
             public List<string> RuleDescriptions { get; set; } = new List<string>();
             public string DwgLine { get; set; }
             public string SummaryLine { get; set; }
@@ -193,7 +194,12 @@ namespace CadToRevit.UI.Dockable
                 List<LayerStandardMatchItem> invalid = safe.Matches.Where(x => x != null && !x.IsValid).ToList();
                 return new LayerAnalysisResultViewData
                 {
-                    RuleDescriptions = LayerStandardAnalyzer.BuildRuleDescriptions(),
+                    StandardTitle = string.IsNullOrWhiteSpace(safe.RuleName)
+                        ? Loc.T("LayerAnalysis.StandardTitle")
+                        : safe.RuleName,
+                    RuleDescriptions = safe.RuleDescriptions != null && safe.RuleDescriptions.Count > 0
+                        ? safe.RuleDescriptions.ToList()
+                        : LayerStandardAnalyzer.BuildRuleDescriptions(),
                     DwgLine = Loc.T("LayerAnalysis.DwgFormat", string.IsNullOrWhiteSpace(dwgName) ? Loc.T("LayerAnalysis.Unknown") : dwgName),
                     SummaryLine = Loc.T("LayerAnalysis.SummaryFormat", safe.TotalLayers, safe.ValidLayers),
                     ValidDisplayLines = valid.Count > 0
