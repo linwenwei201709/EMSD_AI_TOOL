@@ -3317,8 +3317,12 @@ namespace CadToRevit.UI.Dockable
                 RoomLengthMm = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorRoomLengthText) : 0,
                 RoomWidthMm = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorRoomWidthText) : 0,
                 RoomHeightMm = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorRoomHeightText) : 0,
-                DoorWidthMm = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorDoorWidthText) : 0,
-                DoorHeightMm = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorDoorHeightText) : 0,
+                DoorWidthMm = preparation != null && preparation.DoorFound && preparation.DoorWidthMm > 0.0
+                    ? preparation.DoorWidthMm
+                    : CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorDoorWidthText) : 0,
+                DoorHeightMm = preparation != null && preparation.DoorFound && preparation.DoorHeightMm > 0.0
+                    ? preparation.DoorHeightMm
+                    : CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorDoorHeightText) : 0,
                 UsableAreaM2 = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorAvailableUsableAreaText) : 0,
                 PointInRoomXmm = placementXmm,
                 PointInRoomYmm = placementYmm,
@@ -3332,6 +3336,11 @@ namespace CadToRevit.UI.Dockable
                 DoorFacingSideOptions = new List<string> { "bottom", "top", "left", "right" },
                 WallFacingSides = RoomCustomFamilyCatalogService.GetWallFacingSides(familyKey).ToList(),
                 DoorDirection = preparation != null ? preparation.DoorDirection : null,
+                DoorFound = preparation != null && preparation.DoorFound,
+                DoorElementId = preparation != null ? preparation.DoorElementId : -1,
+                DoorCenterXmm = preparation != null ? preparation.DoorCenterXmm : 0.0,
+                DoorCenterYmm = preparation != null ? preparation.DoorCenterYmm : 0.0,
+                DoorSource = preparation != null ? preparation.DoorSource : string.Empty,
                 RestrictedAreas = preparation != null && preparation.RestrictedAreas != null
                     ? preparation.RestrictedAreas
                     : new List<RestrictedAreaRequestItem>(),

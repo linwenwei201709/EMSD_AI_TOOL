@@ -1,5 +1,51 @@
 # Colleague Frontend Compatibility Patch
 
+## 2026-08-25 - Reduce path preview clutter and display the largest transport group
+
+- Route preview now keeps the backend route geometry unchanged but displays
+  only the largest verified transport group when a disassembly response
+  contains multiple groups. Length is the primary size comparison, followed
+  by width and height, matching the backend largest-segment convention.
+- Coordinate markers are sampled at approximately 1,000 IFC millimetres along
+  each displayed path, while the first and last points remain visible. The
+  route boxes still use every backend path point, so this is a visualization
+  change only and does not alter route calculation or verification.
+
+## 2026-08-25 - Feed imported-DWG door candidates into room fit
+
+- `UI/Dockable/RoomRecognitionPaneRuntime.cs` now keeps the existing native
+  Revit door/opening resolver as the first choice and, only when it has no
+  usable result, detects candidates from the active imported DWG `DOOR` layer
+  through `DoorCandidateDetector`.
+- DWG candidates are matched to the selected room boundary, and their opening
+  center, width and wall direction are used for door-facing orientation. The
+  active DWG import is cached per document/import/fingerprint so every room
+  does not re-parse the CAD geometry.
+- DWG candidates are marked with `source=DWG`; an unknown CAD door height is
+  left as unavailable (`0`/`-` in the UI) rather than being fabricated.
+- Native Revit door priority, the existing UI flow, coordinate conversion and
+  route algorithm remain unchanged.
+- Added a bounded raw-layer fallback for door-named layers such as `A-DOOR`
+  and `ARCH-DOOR`, with center/width de-duplication. Generic non-door layers
+  are not scanned.
+
+## 2026-08-25 - Preserve the resolved room-door metadata
+
+- Added optional door metadata to the room-fit preparation result and request:
+  Revit element id, width/height, IFC-mm center, source and `found` state.
+- The existing `DoorMetricCandidate` resolver is still used once per
+  preparation. Its existing priority and fallback rules are unchanged.
+- `/api/check_room_fit` requests now include an additive `door_info` object.
+  Older backends can ignore it; it prevents future clients from needing to
+  re-scan IFC or the Revit document to identify the selected door.
+- When the candidate is valid, its dimensions take precedence over stale or
+  empty display text. If it is unavailable, the previous display/request
+  fallback is retained.
+- Added `[AhuRoomFit] doorInfo ...` diagnostics for troubleshooting.
+
+No UI layout, route algorithm, coordinate conversion, maintenance-side
+selection, or door-candidate ordering was changed.
+
 ## 2026-08-24 - Accept cached verified transport groups
 
 - Updated `CadToRevit/Services/PathPreview/CalculatePathApiService.cs` to accept both `independently_verified` and `verified_exact_input_cache` transport-group verification states.
@@ -130,3 +176,15 @@ route restrictions, and failed-route red-zone visualization.
 - This change is specifically for restoring the previously verified modular
   route behaviour (for example, the Service Lift to AHU Room 2 case). It does
   not alter IFC coordinate conversion, clearance values or collision rules.
+
+## 2026-08-25 - Same-origin integration branch
+
+- Integration branch: `compat/from-colleague-main-20260825`.
+- Base: colleague repository `main` at `c66a1aea40787664be1fee7796a8c235bcf8c235`.
+- The branch is a direct descendant of that commit; the earlier unrelated
+  compatibility snapshot was not used as the branch base.
+- Current validated frontend patches were then applied: resolved room-door
+  metadata, imported-DWG door candidates, common DWG door-layer aliases, and
+  route-preview marker sampling at approximately one metre.
+- No coordinate-system rewrite or route-planning algorithm replacement was
+  introduced by this integration step.
