@@ -14,6 +14,9 @@
   left as unavailable (`0`/`-` in the UI) rather than being fabricated.
 - Native Revit door priority, the existing UI flow, coordinate conversion and
   route algorithm remain unchanged.
+- Added a bounded raw-layer fallback for door-named layers such as `A-DOOR`
+  and `ARCH-DOOR`, with center/width de-duplication. Generic non-door layers
+  are not scanned.
 
 ## 2026-08-25 - Preserve the resolved room-door metadata
 

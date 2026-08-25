@@ -8525,7 +8525,43 @@ namespace CadToRevit.UI.Dockable
                     import,
                     new DoorDetectSettings());
 
-                foreach (DoorCandidate door in detection?.Candidates ?? new List<DoorCandidate>())
+                List<DoorCandidate> detectedDoors = new List<DoorCandidate>();
+                AppendUniqueDwgDoorCandidates(detectedDoors, detection?.Candidates);
+
+                // The default layer map intentionally stays conservative.  A
+                // DWG can still use common AIA-style names such as A-DOOR or
+                // ARCH-DOOR, so scan only explicitly door-named raw layers as
+                // an additive fallback instead of treating every CAD line as
+                // a possible door.
+                foreach (string rawLayerName in (session?.DwgLayers ?? new List<string>())
+                    .Where(IsLikelyDwgDoorLayer)
+                    .Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    if (string.Equals(rawLayerName, "DOOR", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(rawLayerName, "DR", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(rawLayerName, "D", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        DoorDetectResult layerDetection = DoorCandidateDetector.DetectByRawLayer(
+                            doc,
+                            import,
+                            new DoorDetectSettings(),
+                            rawLayerName);
+                        AppendUniqueDwgDoorCandidates(detectedDoors, layerDetection?.Candidates);
+                    }
+                    catch (Exception layerEx)
+                    {
+                        DiagnosticRecorder.AppendDebug(
+                            "[RoomDoorMetric] DWG raw door layer skipped, layer=" + rawLayerName +
+                            ", error=" + layerEx.Message);
+                    }
+                }
+
+                foreach (DoorCandidate door in detectedDoors)
                 {
                     if (door == null)
                     {
@@ -8542,15 +8578,7 @@ namespace CadToRevit.UI.Dockable
                         continue;
                     }
 
-                    double widthMm = IsPositiveFinite(door.OpeningWidthMm)
-                        ? door.OpeningWidthMm
-                        : IsPositiveFinite(door.CombinedWidthMm)
-                            ? door.CombinedWidthMm
-                            : IsPositiveFinite(door.FinalWidthMmApplied)
-                                ? door.FinalWidthMmApplied
-                                : IsPositiveFinite(door.VirtualOpeningWidthMm)
-                                    ? door.VirtualOpeningWidthMm
-                                    : door.WidthMm;
+                    double widthMm = ResolveDwgDoorWidthMm(door);
                     if (!IsPositiveFinite(widthMm))
                     {
                         continue;
@@ -8577,7 +8605,8 @@ namespace CadToRevit.UI.Dockable
                 DiagnosticRecorder.AppendDebug(
                     "[RoomDoorMetric] DWG fallback detected " + result.Count.ToString(CultureInfo.InvariantCulture) +
                     " candidate(s), importId=" + import.Id.IntegerValue.ToString(CultureInfo.InvariantCulture) +
-                    ", segments=" + (detection != null ? detection.DoorSegmentsTotal.ToString(CultureInfo.InvariantCulture) : "0"));
+                    ", segments=" + (detection != null ? detection.DoorSegmentsTotal.ToString(CultureInfo.InvariantCulture) : "0") +
+                    ", rawLayerFallback=true");
             }
             catch (Exception ex)
             {
@@ -8591,6 +8620,85 @@ namespace CadToRevit.UI.Dockable
             }
 
             return result;
+        }
+
+        private static void AppendUniqueDwgDoorCandidates(
+            List<DoorCandidate> destination,
+            IEnumerable<DoorCandidate> source)
+        {
+            if (destination == null || source == null)
+            {
+                return;
+            }
+
+            foreach (DoorCandidate candidate in source)
+            {
+                if (candidate == null)
+                {
+                    continue;
+                }
+
+                XYZ point = candidate.OpeningCenterPoint ??
+                            candidate.CombinedCenter ??
+                            candidate.CenterPoint ??
+                            candidate.ProjectedPointOnWall ??
+                            candidate.FinalPlacementPoint;
+                double widthMm = ResolveDwgDoorWidthMm(candidate);
+                if (point == null || !IsPositiveFinite(widthMm))
+                {
+                    continue;
+                }
+
+                bool duplicate = destination.Any(existing =>
+                {
+                    XYZ existingPoint = existing?.OpeningCenterPoint ??
+                                         existing?.CombinedCenter ??
+                                         existing?.CenterPoint ??
+                                         existing?.ProjectedPointOnWall ??
+                                         existing?.FinalPlacementPoint;
+                    double existingWidthMm = ResolveDwgDoorWidthMm(existing);
+                    return existingPoint != null &&
+                           existingPoint.DistanceTo(point) <= UnitUtils.ConvertToInternalUnits(100.0, UnitTypeId.Millimeters) &&
+                           Math.Abs(existingWidthMm - widthMm) <= 150.0;
+                });
+                if (!duplicate)
+                {
+                    destination.Add(candidate);
+                }
+            }
+        }
+
+        private static double ResolveDwgDoorWidthMm(DoorCandidate door)
+        {
+            if (door == null)
+            {
+                return 0.0;
+            }
+
+            return IsPositiveFinite(door.OpeningWidthMm)
+                ? door.OpeningWidthMm
+                : IsPositiveFinite(door.CombinedWidthMm)
+                    ? door.CombinedWidthMm
+                    : IsPositiveFinite(door.FinalWidthMmApplied)
+                        ? door.FinalWidthMmApplied
+                        : IsPositiveFinite(door.VirtualOpeningWidthMm)
+                            ? door.VirtualOpeningWidthMm
+                            : door.WidthMm;
+        }
+
+        private static bool IsLikelyDwgDoorLayer(string rawLayerName)
+        {
+            if (string.IsNullOrWhiteSpace(rawLayerName))
+            {
+                return false;
+            }
+
+            string value = rawLayerName.Trim().ToUpperInvariant();
+            return value.Contains("DOOR") ||
+                   value == "D" ||
+                   value == "DR" ||
+                   value.EndsWith("-D", StringComparison.Ordinal) ||
+                   value.EndsWith("_D", StringComparison.Ordinal);
         }
 
         private static string BuildDwgDoorMetricCacheKey(
