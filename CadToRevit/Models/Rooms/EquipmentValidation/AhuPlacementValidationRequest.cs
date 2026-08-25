@@ -61,6 +61,19 @@ namespace CadToRevit.Models.Rooms.EquipmentValidation
         // IFC-mm direction vector parallel to the selected room door.
         public double[] DoorDirection { get; set; }
 
+        // Optional metadata for diagnostics and future backend correlation.
+        // The room-fit contract remains backward compatible when this data
+        // is unavailable (for example, a legacy manually-created room).
+        public bool DoorFound { get; set; }
+
+        public int DoorElementId { get; set; } = -1;
+
+        public double DoorCenterXmm { get; set; }
+
+        public double DoorCenterYmm { get; set; }
+
+        public string DoorSource { get; set; }
+
         // Optional AHU-local sides that are configured to sit against room walls.
         // Values sent to Python are: top / bottom / left / right.
         // Zero to three sides are allowed.  The list is derived from Maintenance2

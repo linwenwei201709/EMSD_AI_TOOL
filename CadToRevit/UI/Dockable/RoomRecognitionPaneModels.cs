@@ -233,6 +233,23 @@ namespace CadToRevit.UI.Dockable
         // IFC-mm direction vector parallel to the selected room door.
         public double[] DoorDirection { get; set; }
 
+        // Optional snapshot of the exact Revit door candidate used while
+        // preparing the room-fit request. These fields are additive: older
+        // callers can leave them empty and keep the previous behaviour.
+        public bool DoorFound { get; set; }
+
+        public int DoorElementId { get; set; } = -1;
+
+        public double DoorWidthMm { get; set; }
+
+        public double DoorHeightMm { get; set; }
+
+        public double DoorCenterXmm { get; set; }
+
+        public double DoorCenterYmm { get; set; }
+
+        public string DoorSource { get; set; }
+
         public List<RestrictedAreaRequestItem> RestrictedAreas { get; set; } =
             new List<RestrictedAreaRequestItem>();
     }

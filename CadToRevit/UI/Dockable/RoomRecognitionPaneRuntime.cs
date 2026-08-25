@@ -4610,17 +4610,60 @@ namespace CadToRevit.UI.Dockable
             // request can align the AHU with a rotated room door. If no usable
             // candidate is found, the backend keeps its legacy side fallback.
             double[] doorDirection = null;
+            bool doorFound = false;
+            int doorElementId = -1;
+            double doorWidthMm = 0.0;
+            double doorHeightMm = 0.0;
+            double doorCenterXmm = 0.0;
+            double doorCenterYmm = 0.0;
+            string doorSource = string.Empty;
             try
             {
                 DoorMetricCandidate doorCandidate = ResolveRoomDoorMetricCandidate(
                     doc,
                     room,
                     roomLevelId);
+                if (doorCandidate != null &&
+                    IsPositiveFinite(doorCandidate.WidthMm) &&
+                    IsPositiveFinite(doorCandidate.HeightMm) &&
+                    doorCandidate.Center != null)
+                {
+                    doorFound = true;
+                    doorElementId = doorCandidate.ElementId != null
+                        ? doorCandidate.ElementId.IntegerValue
+                        : -1;
+                    doorWidthMm = doorCandidate.WidthMm;
+                    doorHeightMm = doorCandidate.HeightMm;
+                    doorCenterXmm = IfcMillimeterCoordinateAdapter.FeetToMillimeters(doorCandidate.Center.X);
+                    doorCenterYmm = IfcMillimeterCoordinateAdapter.FeetToMillimeters(doorCandidate.Center.Y);
+                    doorSource = doorCandidate.WidthSource ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(doorCandidate.HeightSource) &&
+                        !string.Equals(doorCandidate.HeightSource, doorSource, StringComparison.OrdinalIgnoreCase))
+                    {
+                        doorSource = string.IsNullOrWhiteSpace(doorSource)
+                            ? doorCandidate.HeightSource
+                            : doorSource + ";" + doorCandidate.HeightSource;
+                    }
+                }
+
                 XYZ direction = doorCandidate != null ? doorCandidate.Direction : null;
                 if (direction != null && IsUsableXyDirection(direction))
                 {
                     doorDirection = new[] { direction.X, direction.Y };
                 }
+
+                DiagnosticRecorder.AppendDebug(
+                    "[AhuRoomFit] doorInfo found=" + doorFound.ToString() +
+                    ", elementId=" + doorElementId.ToString(CultureInfo.InvariantCulture) +
+                    ", widthMm=" + doorWidthMm.ToString("0.###", CultureInfo.InvariantCulture) +
+                    ", heightMm=" + doorHeightMm.ToString("0.###", CultureInfo.InvariantCulture) +
+                    ", centerMm=[" +
+                    doorCenterXmm.ToString("0.###", CultureInfo.InvariantCulture) + "," +
+                    doorCenterYmm.ToString("0.###", CultureInfo.InvariantCulture) +
+                    "], source=" + (doorSource ?? string.Empty) +
+                    ", direction=" + (doorDirection == null ? "(none)" :
+                        "[" + doorDirection[0].ToString("0.######", CultureInfo.InvariantCulture) + "," +
+                        doorDirection[1].ToString("0.######", CultureInfo.InvariantCulture) + "]"));
             }
             catch (Exception ex)
             {
@@ -4672,6 +4715,13 @@ namespace CadToRevit.UI.Dockable
                 PlacementXmm = xMm,
                 PlacementYmm = yMm,
                 DoorDirection = doorDirection,
+                DoorFound = doorFound,
+                DoorElementId = doorElementId,
+                DoorWidthMm = doorWidthMm,
+                DoorHeightMm = doorHeightMm,
+                DoorCenterXmm = doorCenterXmm,
+                DoorCenterYmm = doorCenterYmm,
+                DoorSource = doorSource,
                 RestrictedAreas = BuildDeliveryRouteRestrictedAreas(doc)
             };
         }

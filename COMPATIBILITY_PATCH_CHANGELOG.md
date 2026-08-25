@@ -1,5 +1,22 @@
 # Colleague Frontend Compatibility Patch
 
+## 2026-08-25 - Preserve the resolved room-door metadata
+
+- Added optional door metadata to the room-fit preparation result and request:
+  Revit element id, width/height, IFC-mm center, source and `found` state.
+- The existing `DoorMetricCandidate` resolver is still used once per
+  preparation. Its existing priority and fallback rules are unchanged.
+- `/api/check_room_fit` requests now include an additive `door_info` object.
+  Older backends can ignore it; it prevents future clients from needing to
+  re-scan IFC or the Revit document to identify the selected door.
+- When the candidate is valid, its dimensions take precedence over stale or
+  empty display text. If it is unavailable, the previous display/request
+  fallback is retained.
+- Added `[AhuRoomFit] doorInfo ...` diagnostics for troubleshooting.
+
+No UI layout, route algorithm, coordinate conversion, maintenance-side
+selection, or door-candidate ordering was changed.
+
 ## 2026-08-24 - Accept cached verified transport groups
 
 - Updated `CadToRevit/Services/PathPreview/CalculatePathApiService.cs` to accept both `independently_verified` and `verified_exact_input_cache` transport-group verification states.

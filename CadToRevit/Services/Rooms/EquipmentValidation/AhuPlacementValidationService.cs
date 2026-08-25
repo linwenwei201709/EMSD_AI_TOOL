@@ -184,6 +184,7 @@ namespace CadToRevit.Services.Rooms.EquipmentValidation
                 .Append(request.EvaluateMaintenanceSpace ? "true" : "false");
 
             AppendNumberArrayJson(sb, "door_direction", request.DoorDirection);
+            AppendDoorInfoJson(sb, request);
 
             if (!string.IsNullOrWhiteSpace(request.DoorFacingSide))
             {
@@ -200,6 +201,43 @@ namespace CadToRevit.Services.Rooms.EquipmentValidation
 
             sb.Append("}");
             return sb.ToString();
+        }
+
+        private static void AppendDoorInfoJson(StringBuilder sb, AhuPlacementValidationRequest request)
+        {
+            if (sb == null || request == null)
+            {
+                return;
+            }
+
+            // Additive metadata only. The current backend can ignore this
+            // object, while newer versions can correlate the selected room
+            // door without re-reading IFC or scanning the Revit document.
+            sb.Append(",\"door_info\":{\"found\":")
+                .Append(request.DoorFound ? "true" : "false");
+
+            if (request.DoorFound)
+            {
+                sb.Append(",\"element_id\":")
+                    .Append(request.DoorElementId.ToString(CultureInfo.InvariantCulture));
+                sb.Append(",\"width_mm\":")
+                    .Append(request.DoorWidthMm.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.Append(",\"height_mm\":")
+                    .Append(request.DoorHeightMm.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.Append(",\"center_ifc_mm\":[")
+                    .Append(request.DoorCenterXmm.ToString("0.###", CultureInfo.InvariantCulture))
+                    .Append(",")
+                    .Append(request.DoorCenterYmm.ToString("0.###", CultureInfo.InvariantCulture))
+                    .Append("]");
+                if (!string.IsNullOrWhiteSpace(request.DoorSource))
+                {
+                    sb.Append(",\"source\":\"")
+                        .Append(EscapeJson(request.DoorSource.Trim()))
+                        .Append("\"");
+                }
+            }
+
+            sb.Append("}");
         }
 
         private static void AppendNumberArrayJson(StringBuilder sb, string name, double[] values)
