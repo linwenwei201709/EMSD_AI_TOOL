@@ -176,15 +176,3 @@ route restrictions, and failed-route red-zone visualization.
 - This change is specifically for restoring the previously verified modular
   route behaviour (for example, the Service Lift to AHU Room 2 case). It does
   not alter IFC coordinate conversion, clearance values or collision rules.
-
-## 2026-08-25 - Same-origin integration branch
-
-- Integration branch: `compat/from-colleague-main-20260825`.
-- Base: colleague repository `main` at `c66a1aea40787664be1fee7796a8c235bcf8c235`.
-- The branch is a direct descendant of that commit; the earlier unrelated
-  compatibility snapshot was not used as the branch base.
-- Current validated frontend patches were then applied: resolved room-door
-  metadata, imported-DWG door candidates, common DWG door-layer aliases, and
-  route-preview marker sampling at approximately one metre.
-- No coordinate-system rewrite or route-planning algorithm replacement was
-  introduced by this integration step.

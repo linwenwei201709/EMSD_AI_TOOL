@@ -3559,32 +3559,48 @@ namespace CadToRevit.UI.Dockable
                 return MapCategory.Ignore;
             }
 
+            // EMSD standard-code names such as ADA2131P do not contain the words themselves.
+            // LayerStandardAnalyzer maps them to labels like "Walls / Partitions" or
+            // "Structural Elements"; use those labels to preselect the corresponding rows.
+            string matchedStandard = string.Empty;
             try
             {
                 LayerStandardAnalyzeResult analysis = LayerStandardAnalyzer.AnalyzeLayers(new[] { rawLayerName });
                 LayerStandardMatchItem match = analysis != null
                     ? analysis.Matches.FirstOrDefault(x => x != null && string.Equals(x.LayerName, rawLayerName, StringComparison.OrdinalIgnoreCase))
                     : null;
-
-                if (match == null)
-                {
-                    return MapCategory.NotForBuild;
-                }
-
-                if (!match.IsValid)
-                {
-                    return MapCategory.Unknown;
-                }
-
-                // For custom department rules, the rule explicitly decides the Revit generation
-                // category. For the built-in EMSD rule, LayerStandardAnalyzer preserves the
-                // previous inference behavior and supplies the same suggested category here.
-                return match.SuggestedMapCategory;
+                matchedStandard = match != null ? match.MatchedStandard : string.Empty;
             }
             catch
             {
+                matchedStandard = string.Empty;
+            }
+
+            if (IsInvalidStandardLayer(rawLayerName))
+            {
+                return MapCategory.Unknown;
+            }
+
+            if (IsNotForBuildLayer(rawLayerName, matchedStandard))
+            {
                 return MapCategory.NotForBuild;
             }
+
+            if (ContainsIgnoreCase(rawLayerName, "Walls") ||
+                ContainsIgnoreCase(rawLayerName, "Wall") ||
+                ContainsIgnoreCase(matchedStandard, "Walls") ||
+                ContainsIgnoreCase(matchedStandard, "Wall"))
+            {
+                return MapCategory.Walls;
+            }
+
+            if (ContainsIgnoreCase(rawLayerName, "Structural") ||
+                ContainsIgnoreCase(matchedStandard, "Structural"))
+            {
+                return MapCategory.Columns;
+            }
+
+            return MapCategory.NotForBuild;
         }
 
         private static bool IsNotForBuildLayer(string rawLayerName, string matchedStandard)

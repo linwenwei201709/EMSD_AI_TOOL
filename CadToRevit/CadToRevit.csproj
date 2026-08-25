@@ -537,9 +537,7 @@
     <Content Include="Doc\Notice_CHS.txt" />
     <Content Include="Doc\Notice_CHT.txt" />
     <Content Include="Doc\Notice_ENU.txt" />
-    <Content Include="AHUFamilyType\catalog.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    <Content Include="AHUFamilyType\catalog.json" />
     <None Include="AHUFamilyType\AHU with Flow rate 1 m3 per s.rfa">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
