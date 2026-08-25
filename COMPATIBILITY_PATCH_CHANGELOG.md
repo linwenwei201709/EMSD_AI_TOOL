@@ -1,5 +1,20 @@
 # Colleague Frontend Compatibility Patch
 
+## 2026-08-25 - Feed imported-DWG door candidates into room fit
+
+- `UI/Dockable/RoomRecognitionPaneRuntime.cs` now keeps the existing native
+  Revit door/opening resolver as the first choice and, only when it has no
+  usable result, detects candidates from the active imported DWG `DOOR` layer
+  through `DoorCandidateDetector`.
+- DWG candidates are matched to the selected room boundary, and their opening
+  center, width and wall direction are used for door-facing orientation. The
+  active DWG import is cached per document/import/fingerprint so every room
+  does not re-parse the CAD geometry.
+- DWG candidates are marked with `source=DWG`; an unknown CAD door height is
+  left as unavailable (`0`/`-` in the UI) rather than being fabricated.
+- Native Revit door priority, the existing UI flow, coordinate conversion and
+  route algorithm remain unchanged.
+
 ## 2026-08-25 - Preserve the resolved room-door metadata
 
 - Added optional door metadata to the room-fit preparation result and request:
