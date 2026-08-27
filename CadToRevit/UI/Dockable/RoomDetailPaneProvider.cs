@@ -2084,19 +2084,9 @@ namespace CadToRevit.UI.Dockable
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <Border x:Name=""WarningBorder""
-                                Background=""#FFF1F2""
-                                BorderBrush=""#FFF1F2""
-                                BorderThickness=""1""
-                                CornerRadius=""6""
-                                Padding=""10,8""
-                                Margin=""0,10,0,0""
-                                Visibility=""Collapsed"">
-                            <TextBlock Text=""Minimum Required Room Size exceeds the selected room size.""
-                                       Foreground=""#B42318""
-                                       FontSize=""11""
-                                       TextWrapping=""Wrap"" />
-                        </Border>
+                        <!-- Customer-approved violation content is shown only in
+                             ValidationReasonsList above.  Detailed diagnostic-only
+                             values are written to the placement violation log. -->
                     </StackPanel>
                 </Border>
                 <ControlTemplate.Triggers>
@@ -2106,9 +2096,6 @@ namespace CadToRevit.UI.Dockable
                     <DataTrigger Binding=""{Binding IsSelected}"" Value=""True"">
                         <Setter TargetName=""CardBorder"" Property=""Background"" Value=""#E1EFFA"" />
                         <Setter TargetName=""CardBorder"" Property=""BorderBrush"" Value=""#5EA0DB"" />
-                    </DataTrigger>
-                    <DataTrigger Binding=""{Binding ShowExceededWarning}"" Value=""True"">
-                        <Setter TargetName=""WarningBorder"" Property=""Visibility"" Value=""Visible"" />
                     </DataTrigger>
                     <DataTrigger Binding=""{Binding HasValidationReasons}"" Value=""True"">
                         <Setter TargetName=""ValidationReasonsList"" Property=""Visibility"" Value=""Visible"" />

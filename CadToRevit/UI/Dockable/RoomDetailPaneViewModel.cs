@@ -1,4 +1,4 @@
-﻿using CadToRevit.Infrastructure.Localization;
+using CadToRevit.Infrastructure.Localization;
 using CadToRevit.Infrastructure.UI;
 using CadToRevit.Models.Rooms;
 using CadToRevit.Models.Rooms.EquipmentValidation;
@@ -102,9 +102,6 @@ namespace CadToRevit.UI.Dockable
         private readonly HashSet<string> _editorPreviewRoomKeys =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private string _lastEditorRoomKey = string.Empty;
-        private readonly AhuPlacementValidationService _ahuPlacementValidationService =
-            new AhuPlacementValidationService();
-
         public event PropertyChangedEventHandler PropertyChanged;
 
         public ObservableCollection<RoomCustomFamilyItemViewModel> FamilyOptions { get; } =
@@ -1962,24 +1959,9 @@ namespace CadToRevit.UI.Dockable
                 //     preparation.GoalYmm);
                 // string responseBody = await Task.Run(() => CalculatePathApiService.PostCalculatePath(requestJson));
 
-                int routeModelId = ParseAhuFamilyKeyNumber(
-                    CurrentEditor != null ? CurrentEditor.SelectedEquipmentFamilyKey : string.Empty);
-                if (routeModelId <= 0 && SelectedEquipmentOption != null)
-                {
-                    routeModelId = ParseAhuFamilyKeyNumber(SelectedEquipmentOption.FamilyKey);
-                }
-                if (routeModelId <= 0)
-                {
-                    const string modelIdMessage =
-                        "The confirmed AHU model could not be resolved for route planning.";
-                    LocalizedDialogService.Error(null, modelIdMessage);
-                    DeliveryRouteHintText = modelIdMessage;
-                    return;
-                }
-
                 string requestJson = CalculatePathApiService.BuildCutAndReplanRequestJson(
                     preparation.SessionId,
-                    routeModelId,
+                    1,
                     preparation.StartXmm,
                     preparation.StartYmm,
                     preparation.GoalXmm,
@@ -3172,7 +3154,7 @@ namespace CadToRevit.UI.Dockable
             }
 
             int statusVersion = ++_equipmentInsertStatusVersion;
-            EquipmentInsertStatusText = "Checking equipment placement, please wait...";
+            EquipmentInsertStatusText = "Calculating equipment placement in Revit, please wait...";
             IsEquipmentInsertStatusVisible = true;
 
             try
@@ -3183,96 +3165,168 @@ namespace CadToRevit.UI.Dockable
                     selectedOption.ClearValidationResult();
                 }
 
-                AhuPlacementValidationPreparationResult preparation =
-                    await RoomRecognitionPaneRuntime.RequestPrepareAhuPlacementValidationAsync(targetRoomKey);
+                // The normal AHU placement path is now fully local to Revit/C#.
+                // Do NOT initialize a Python route session and do NOT call
+                // /api/check_room_fit here.  The placement service resolves:
+                //   Door Side -> rotation
+                //   Wall Side + Dimension -> exact AHU-body-to-wall gap
+                //   Maintenance Space geometry -> final room-boundary fit
+                // directly from the current Revit document and catalog.json.
+                CaptureEditorEquipmentRollbackState(targetRoomKey);
+                _editorPreviewRoomKeys.Add(targetRoomKey);
+
+                // Clear previously inserted equipment and generated duct / pipe work
+                // before placing the newly selected AHU.
+                await RoomRecognitionPaneRuntime.RequestClearRoomEquipmentLayoutAsync(targetRoomKey);
 
                 if (statusVersion != _equipmentInsertStatusVersion)
                 {
                     return;
                 }
 
-                if (preparation == null ||
-                    !preparation.Success ||
-                    string.IsNullOrWhiteSpace(preparation.SessionId))
+                bool inserted = await RoomRecognitionPaneRuntime.RequestSetRoomCustomFamilyAsync(
+                    targetRoomKey,
+                    familyKey);
+
+                if (statusVersion != _equipmentInsertStatusVersion)
                 {
+                    return;
+                }
+
+                if (!inserted)
+                {
+                    EquipmentPlacementValidationDto failedValidation =
+                        new EquipmentPlacementValidationDto
+                        {
+                            HasResult = true,
+                            IsValid = false,
+                            Status = "No Feasible Placement",
+                            Reasons = new List<string>
+                            {
+                                "No feasible local AHU placement was found using the configured Door Side, Wall Side distances and Maintenance Space envelope."
+                            },
+                            Source = "RevitLocal"
+                        };
+
+                    if (selectedOption != null)
+                    {
+                        selectedOption.IsChecking = false;
+                        selectedOption.ApplyValidationDto(failedValidation);
+                    }
+                    SetCurrentEquipmentValidation(failedValidation);
+
                     throw new InvalidOperationException(
-                        preparation != null && !string.IsNullOrWhiteSpace(preparation.Message)
-                            ? preparation.Message
-                            : "Failed to prepare AHU room fit validation.");
+                        "No feasible AHU placement was found in the selected room. Check the configured Door Side, Wall Side distances and Maintenance Space.");
                 }
 
-                AhuPlacementValidationResult validationResult =
-                    await _ahuPlacementValidationService.ValidateAsync(
-                        BuildAhuPlacementValidationRequest(familyKey, preparation));
+                // The Revit placement service can intentionally keep an AHU in the
+                // room even when no fully feasible fit exists.  In that case the
+                // instance is a manual-review placement, not a valid placement.  The
+                // runtime has already applied the local Maintenance fit result to the
+                // selected card before this await completes.
+                bool retainedForManualReview = selectedOption != null &&
+                    (string.Equals(selectedOption.SizeStatus, "Exceeded", StringComparison.OrdinalIgnoreCase) ||
+                     selectedOption.HasFitWarning);
 
-                if (statusVersion != _equipmentInsertStatusVersion)
+                string placementFitStatusCode =
+                    selectedOption != null
+                        ? selectedOption.PlacementFitStatusCode ?? string.Empty
+                        : string.Empty;
+
+                bool physicalDimensionOversized =
+                    retainedForManualReview &&
+                    string.Equals(
+                        placementFitStatusCode,
+                        "PhysicalDimensionOversized",
+                        StringComparison.OrdinalIgnoreCase);
+
+                bool restrictedAreaViolation =
+                    retainedForManualReview &&
+                    string.Equals(
+                        placementFitStatusCode,
+                        "RestrictedAreaViolation",
+                        StringComparison.OrdinalIgnoreCase);
+
+                bool multipleSpatialViolations =
+                    retainedForManualReview &&
+                    string.Equals(
+                        placementFitStatusCode,
+                        "MultipleSpatialViolations",
+                        StringComparison.OrdinalIgnoreCase);
+
+                bool placedNotConfigured =
+                    string.Equals(
+                        placementFitStatusCode,
+                        "NotConfigured",
+                        StringComparison.OrdinalIgnoreCase);
+
+                string validationStatus = placedNotConfigured
+                    ? "Placed – Not Configured"
+                    : "Valid";
+                string validationSource = placedNotConfigured
+                    ? "RevitLocal/NotConfigured"
+                    : "RevitLocal";
+                if (retainedForManualReview)
                 {
-                    return;
+                    if (multipleSpatialViolations)
+                    {
+                        validationStatus = "Multiple Spatial Violations";
+                        validationSource = "RevitLocal/PhysicalDimension+RestrictedArea";
+                    }
+                    else if (restrictedAreaViolation)
+                    {
+                        validationStatus = "Restricted Area Violation";
+                        validationSource = "RevitLocal/RestrictedArea";
+                    }
+                    else if (physicalDimensionOversized)
+                    {
+                        validationStatus = "Physical Dimension Oversized";
+                        validationSource = "RevitLocal/PhysicalDimension";
+                    }
+                    else
+                    {
+                        validationStatus = "No Feasible Placement";
+                    }
                 }
 
-                EquipmentPlacementValidationDto validationDto = ToValidationDto(validationResult);
+                EquipmentPlacementValidationDto validationDto =
+                    new EquipmentPlacementValidationDto
+                    {
+                        HasResult = true,
+                        IsValid = !retainedForManualReview,
+                        Status = validationStatus,
+                        Reasons = retainedForManualReview
+                            ? new List<string>
+                            {
+                                !string.IsNullOrWhiteSpace(selectedOption.FitWarningText)
+                                    ? selectedOption.FitWarningText
+                                    : "The AHU was inserted for manual review because its body / Maintenance Space envelope does not fully satisfy the room constraints."
+                            }
+                            : new List<string>(),
+                        Source = validationSource
+                    };
 
-                // Validation has completed at this point. End the "Checking..."
-                // state BEFORE publishing the result so the warning reasons are
-                // never visible underneath a still-visible Checking badge.
                 if (selectedOption != null)
                 {
                     selectedOption.IsChecking = false;
                     selectedOption.ApplyValidationDto(validationDto);
                 }
-
                 SetCurrentEquipmentValidation(validationDto);
 
                 if (statusVersion == _equipmentInsertStatusVersion)
                 {
-                    EquipmentInsertStatusText = "Inserting equipment, please wait...";
-                }
-
-                // Capture the AHU that existed before this editor session modifies the room.
-                // It is restored if the user later clicks Cancel.
-                CaptureEditorEquipmentRollbackState(targetRoomKey);
-                _editorPreviewRoomKeys.Add(targetRoomKey);
-
-                // Clear previously inserted equipment and generated duct / pipe work before placing the new family.
-                await RoomRecognitionPaneRuntime.RequestClearRoomEquipmentLayoutAsync(targetRoomKey);
-
-                // Changing Target Room invalidates this in-flight insertion. Stop
-                // before placing the old room's family after its preview was cleared.
-                if (statusVersion != _equipmentInsertStatusVersion)
-                {
-                    return;
-                }
-
-                // Use exactly the same XY point that was sent to Python as
-                // placement_point, so the API fit check and the Revit family
-                // insertion are evaluating / using the same location.
-                // The room-fit API returns an absolute IFC/Revit XY direction in
-                // orientation_deg for the current door-based test scenario. Pass it
-                // through to placement. The placement service intentionally bypasses
-                // the legacy Service Side / RoomLong / RoomShort orientation logic
-                // whenever this API angle is available.
-                double insertXmm = validationResult != null &&
-                    !double.IsNaN(validationResult.PlacementPointXmm) &&
-                    !double.IsInfinity(validationResult.PlacementPointXmm)
-                    ? validationResult.PlacementPointXmm
-                    : preparation.PlacementXmm;
-                double insertYmm = validationResult != null &&
-                    !double.IsNaN(validationResult.PlacementPointYmm) &&
-                    !double.IsInfinity(validationResult.PlacementPointYmm)
-                    ? validationResult.PlacementPointYmm
-                    : preparation.PlacementYmm;
-
-                await RoomRecognitionPaneRuntime.RequestSetRoomCustomFamilyAsync(
-                    targetRoomKey,
-                    familyKey,
-                    insertXmm,
-                    insertYmm,
-                    validationResult != null ? validationResult.OrientationDeg : null);
-
-                if (statusVersion == _equipmentInsertStatusVersion)
-                {
-                    EquipmentInsertStatusText = "Equipment inserted successfully.";
-                    await Task.Delay(1500);
+                    EquipmentInsertStatusText = placedNotConfigured
+                        ? "Equipment placed at room center. Placed – Not Configured."
+                        : retainedForManualReview
+                            ? (multipleSpatialViolations
+                                ? "Equipment inserted for manual review. Multiple Spatial Violations."
+                                : restrictedAreaViolation
+                                    ? "Equipment inserted for manual review. Restricted Area Violation."
+                                    : physicalDimensionOversized
+                                        ? "Equipment inserted for manual review. Physical Dimension Oversized."
+                                        : "Equipment inserted for manual review. The placement exceeds one or more room constraints.")
+                            : "Equipment inserted successfully.";
+                    await Task.Delay(1200);
                 }
 
                 if (statusVersion == _equipmentInsertStatusVersion)
@@ -3284,11 +3338,15 @@ namespace CadToRevit.UI.Dockable
             {
                 if (statusVersion == _equipmentInsertStatusVersion)
                 {
-                    EquipmentInsertStatusText = "Equipment insertion failed. Please check Revit warnings and try again.";
+                    EquipmentInsertStatusText = "Equipment insertion failed. Please check the room / maintenance configuration and try again.";
                     IsEquipmentInsertStatusVisible = true;
                 }
 
-                MessageBox.Show(ex.Message, "CadToRevit - Room Detail", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(
+                    ex.Message,
+                    "CadToRevit - Room Detail",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
             }
             finally
             {
@@ -3317,33 +3375,17 @@ namespace CadToRevit.UI.Dockable
                 RoomLengthMm = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorRoomLengthText) : 0,
                 RoomWidthMm = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorRoomWidthText) : 0,
                 RoomHeightMm = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorRoomHeightText) : 0,
-                DoorWidthMm = preparation != null && preparation.DoorFound && preparation.DoorWidthMm > 0.0
-                    ? preparation.DoorWidthMm
-                    : CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorDoorWidthText) : 0,
-                DoorHeightMm = preparation != null && preparation.DoorFound && preparation.DoorHeightMm > 0.0
-                    ? preparation.DoorHeightMm
-                    : CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorDoorHeightText) : 0,
+                DoorWidthMm = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorDoorWidthText) : 0,
+                DoorHeightMm = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorDoorHeightText) : 0,
                 UsableAreaM2 = CurrentEditor != null ? ParseFirstNumber(CurrentEditor.EditorAvailableUsableAreaText) : 0,
                 PointInRoomXmm = placementXmm,
                 PointInRoomYmm = placementYmm,
                 PlacementPointXmm = placementXmm,
                 PlacementPointYmm = placementYmm,
                 Orientation = null,
-                EvaluationMode = "find_feasible_placement",
-                UseMaintenanceSpace = false,
-                EvaluateMaintenanceSpace = true,
+                UseMaintenanceSpace = true,
                 DoorFacingSide = RoomCustomFamilyCatalogService.GetDoorFacingSide(familyKey),
-                DoorFacingSideOptions = new List<string> { "bottom", "top", "left", "right" },
                 WallFacingSides = RoomCustomFamilyCatalogService.GetWallFacingSides(familyKey).ToList(),
-                DoorDirection = preparation != null ? preparation.DoorDirection : null,
-                DoorFound = preparation != null && preparation.DoorFound,
-                DoorElementId = preparation != null ? preparation.DoorElementId : -1,
-                DoorCenterXmm = preparation != null ? preparation.DoorCenterXmm : 0.0,
-                DoorCenterYmm = preparation != null ? preparation.DoorCenterYmm : 0.0,
-                DoorSource = preparation != null ? preparation.DoorSource : string.Empty,
-                RestrictedAreas = preparation != null && preparation.RestrictedAreas != null
-                    ? preparation.RestrictedAreas
-                    : new List<RestrictedAreaRequestItem>(),
                 MaintenanceSpaces = maintenanceSpaces,
                 SubModules = BuildAhuPlacementSubModuleFootprints(familyKey)
             };
@@ -3413,36 +3455,6 @@ namespace CadToRevit.UI.Dockable
 
         private static List<AhuPlacementSubModuleRequest> BuildAhuPlacementSubModuleFootprints(string familyKey)
         {
-            // Prefer the backend workbook/catalog layout when available. This
-            // keeps the colleague UI and persisted family catalog intact while
-            // using the same six-module polygon coordinates as the current API.
-            int modelId = ParseAhuFamilyKeyNumber(familyKey);
-            IReadOnlyList<AhuEquipmentLayoutCatalogService.LayoutModule> apiLayout =
-                AhuEquipmentLayoutCatalogService.TryGetLayout(modelId);
-            if (apiLayout != null && apiLayout.Count > 0)
-            {
-                List<AhuPlacementSubModuleRequest> apiResult = apiLayout
-                    .Where(x => x != null && x.Points != null && x.Points.Count >= 4)
-                    .Select(x => new AhuPlacementSubModuleRequest
-                    {
-                        Module = x.Key,
-                        Name = x.Name ?? string.Empty,
-                        Points = x.Points
-                            .Where(point => point != null && point.Length >= 2)
-                            .Select(point => new AhuPlacementPoint2D(point[0], point[1]))
-                            .ToList()
-                    })
-                    .Where(x => x.Points.Count >= 4)
-                    .ToList();
-                if (apiResult.Count > 0)
-                {
-                    DiagnosticRecorder.AppendDebug(
-                        "[AhuRoomFitApi] subModules source=backend_catalog, familyKey=" +
-                        (familyKey ?? string.Empty) + ", count=" + apiResult.Count);
-                    return apiResult;
-                }
-            }
-
             IReadOnlyList<RoomCustomFamilySubModuleDto> configured =
                 RoomCustomFamilyCatalogService.GetSubModules(familyKey);
 
@@ -5082,6 +5094,7 @@ namespace CadToRevit.UI.Dockable
         private bool _hasValidationResult;
         private bool _isValidationValid;
         private string _validationStatusText;
+        private string _placementFitStatusCode;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -5128,6 +5141,12 @@ namespace CadToRevit.UI.Dockable
         public int MaintenanceOtherSideMm { get; set; }
 
         public int MaintenanceFrontBackMm { get; set; }
+
+        public string PlacementFitStatusCode
+        {
+            get { return _placementFitStatusCode ?? string.Empty; }
+            private set { _placementFitStatusCode = value ?? string.Empty; }
+        }
 
         public string SizeStatus
         {
@@ -5333,6 +5352,14 @@ namespace CadToRevit.UI.Dockable
                     return new SolidColorBrush(Color.FromRgb(22, 103, 183));
                 }
 
+                if (string.Equals(
+                        ValidationStatusText,
+                        "Placed – Not Configured",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return new SolidColorBrush(Color.FromRgb(93, 106, 120));
+                }
+
                 return IsValidationValid
                     ? new SolidColorBrush(Color.FromRgb(27, 124, 73))
                     : new SolidColorBrush(Color.FromRgb(180, 35, 24));
@@ -5408,6 +5435,8 @@ namespace CadToRevit.UI.Dockable
 
         public void ApplyPlacementFitResult(string fitStatus, string warningMessage)
         {
+            PlacementFitStatusCode = fitStatus;
+
             if (string.IsNullOrWhiteSpace(fitStatus))
             {
                 SizeStatus = "-";
@@ -5420,8 +5449,15 @@ namespace CadToRevit.UI.Dockable
             {
                 SizeStatus = "Fit";
             }
+            else if (string.Equals(fitStatus, "NotConfigured", StringComparison.OrdinalIgnoreCase))
+            {
+                SizeStatus = "Not Configured";
+            }
             else if (string.Equals(fitStatus, "Exceeded", StringComparison.OrdinalIgnoreCase) ||
-                     string.Equals(fitStatus, "TouchWall", StringComparison.OrdinalIgnoreCase))
+                     string.Equals(fitStatus, "TouchWall", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(fitStatus, "PhysicalDimensionOversized", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(fitStatus, "RestrictedAreaViolation", StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(fitStatus, "MultipleSpatialViolations", StringComparison.OrdinalIgnoreCase))
             {
                 SizeStatus = "Exceeded";
             }

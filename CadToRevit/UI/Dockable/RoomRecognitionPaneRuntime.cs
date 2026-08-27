@@ -1,18 +1,15 @@
-﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using CadToRevit.Commands;
 using CadToRevit.Infrastructure.Localization;
 using CadToRevit.Infrastructure.UI;
-using CadToRevit.Models;
 using CadToRevit.Models.Path;
 using CadToRevit.Models.Rooms.DeliveryRoutes;
 using CadToRevit.Models.Rooms.LayoutPlans;
 using CadToRevit.Models.Rooms;
 using CadToRevit.Models.Rooms.Semantic;
 using CadToRevit.Services.Diagnostics;
-using CadToRevit.Services.Api;
-using CadToRevit.Services;
 using CadToRevit.Services.Part3;
 using CadToRevit.Services.PathObstacles;
 using CadToRevit.Services.PathPreview;
@@ -48,12 +45,6 @@ namespace CadToRevit.UI.Dockable
         private static RoomRecognitionPaneState _state = new RoomRecognitionPaneState();
         private static UIDocument _uiDoc;
         private static Document _doc;
-        // Door candidates from the active DWG are document-scoped.  Room-fit
-        // preparation can run once per room, so keep the detector result out
-        // of that per-room loop.  The import id and session fingerprint in
-        // the key invalidate the cache after a new/reloaded DWG is imported.
-        private static readonly Dictionary<string, List<DoorMetricCandidate>> _dwgDoorMetricCache =
-            new Dictionary<string, List<DoorMetricCandidate>>(StringComparer.OrdinalIgnoreCase);
         private static string _selectedRoomKey;
         private static string _selectedLiftKey;
         private static XYZ _lastDeliveryRouteRequestStartPoint;
@@ -4585,13 +4576,11 @@ namespace CadToRevit.UI.Dockable
             }
 
             RoomSemanticRecord room = null;
-            ElementId roomLevelId = ElementId.InvalidElementId;
             lock (SyncRoot)
             {
                 if (_state != null)
                 {
                     _state.RoomByKey.TryGetValue(roomKey ?? string.Empty, out room);
-                    roomLevelId = ResolveRoomLevelId(_state, roomKey);
                 }
             }
 
@@ -4612,70 +4601,6 @@ namespace CadToRevit.UI.Dockable
             {
                 return CreateAhuPlacementValidationPreparationFailure(
                     "The selected room placement point could not be resolved.");
-            }
-
-            // Reuse the existing door-metric candidate resolver so the room-fit
-            // request can align the AHU with a rotated room door. If no usable
-            // candidate is found, the backend keeps its legacy side fallback.
-            double[] doorDirection = null;
-            bool doorFound = false;
-            int doorElementId = -1;
-            double doorWidthMm = 0.0;
-            double doorHeightMm = 0.0;
-            double doorCenterXmm = 0.0;
-            double doorCenterYmm = 0.0;
-            string doorSource = string.Empty;
-            try
-            {
-                DoorMetricCandidate doorCandidate = ResolveRoomDoorMetricCandidate(
-                    doc,
-                    room,
-                    roomLevelId);
-                if (doorCandidate != null &&
-                    IsPositiveFinite(doorCandidate.WidthMm) &&
-                    doorCandidate.Center != null)
-                {
-                    doorFound = true;
-                    doorElementId = doorCandidate.ElementId != null
-                        ? doorCandidate.ElementId.IntegerValue
-                        : -1;
-                    doorWidthMm = doorCandidate.WidthMm;
-                    doorHeightMm = doorCandidate.HeightMm;
-                    doorCenterXmm = IfcMillimeterCoordinateAdapter.FeetToMillimeters(doorCandidate.Center.X);
-                    doorCenterYmm = IfcMillimeterCoordinateAdapter.FeetToMillimeters(doorCandidate.Center.Y);
-                    doorSource = doorCandidate.WidthSource ?? string.Empty;
-                    if (!string.IsNullOrWhiteSpace(doorCandidate.HeightSource) &&
-                        !string.Equals(doorCandidate.HeightSource, doorSource, StringComparison.OrdinalIgnoreCase))
-                    {
-                        doorSource = string.IsNullOrWhiteSpace(doorSource)
-                            ? doorCandidate.HeightSource
-                            : doorSource + ";" + doorCandidate.HeightSource;
-                    }
-                }
-
-                XYZ direction = doorCandidate != null ? doorCandidate.Direction : null;
-                if (direction != null && IsUsableXyDirection(direction))
-                {
-                    doorDirection = new[] { direction.X, direction.Y };
-                }
-
-                DiagnosticRecorder.AppendDebug(
-                    "[AhuRoomFit] doorInfo found=" + doorFound.ToString() +
-                    ", elementId=" + doorElementId.ToString(CultureInfo.InvariantCulture) +
-                    ", widthMm=" + doorWidthMm.ToString("0.###", CultureInfo.InvariantCulture) +
-                    ", heightMm=" + doorHeightMm.ToString("0.###", CultureInfo.InvariantCulture) +
-                    ", centerMm=[" +
-                    doorCenterXmm.ToString("0.###", CultureInfo.InvariantCulture) + "," +
-                    doorCenterYmm.ToString("0.###", CultureInfo.InvariantCulture) +
-                    "], source=" + (doorSource ?? string.Empty) +
-                    ", direction=" + (doorDirection == null ? "(none)" :
-                        "[" + doorDirection[0].ToString("0.######", CultureInfo.InvariantCulture) + "," +
-                        doorDirection[1].ToString("0.######", CultureInfo.InvariantCulture) + "]"));
-            }
-            catch (Exception ex)
-            {
-                DiagnosticRecorder.AppendDebug(
-                    "[AhuRoomFit] Door direction resolution skipped. Error=" + ex.Message);
             }
 
             RoutePlannerInitResult initResult = RoutePlannerAutoInitService.EnsureInitialized(doc, uiDoc);
@@ -4699,8 +4624,8 @@ namespace CadToRevit.UI.Dockable
             DiagnosticRecorder.AppendDebug(
                 "[AhuPlacementPointMarker] Draw disabled. Placement point is API-only.");
 
-            double xMm = IfcMillimeterCoordinateAdapter.FeetToMillimeters(placementPoint.X);
-            double yMm = IfcMillimeterCoordinateAdapter.FeetToMillimeters(placementPoint.Y);
+            double xMm = placementPoint.X * 304.8;
+            double yMm = placementPoint.Y * 304.8;
 
             DiagnosticRecorder.AppendDebug(
                 "[AhuRoomFit] prepared roomKey=" + (roomKey ?? string.Empty) +
@@ -4720,16 +4645,7 @@ namespace CadToRevit.UI.Dockable
                 SessionId = initResult.SessionId,
                 RoomKey = roomKey ?? string.Empty,
                 PlacementXmm = xMm,
-                PlacementYmm = yMm,
-                DoorDirection = doorDirection,
-                DoorFound = doorFound,
-                DoorElementId = doorElementId,
-                DoorWidthMm = doorWidthMm,
-                DoorHeightMm = doorHeightMm,
-                DoorCenterXmm = doorCenterXmm,
-                DoorCenterYmm = doorCenterYmm,
-                DoorSource = doorSource,
-                RestrictedAreas = BuildDeliveryRouteRestrictedAreas(doc)
+                PlacementYmm = yMm
             };
         }
 
@@ -5444,20 +5360,60 @@ namespace CadToRevit.UI.Dockable
                     _state.RoomCustomFamilyInstanceIdByRoomKey[roomKey] = placementResult.CreatedElementId ?? ElementId.InvalidElementId;
                 }
 
+                // Spatial violation reporting is intentionally post-placement.
+                // It must never move/rotate/delete the AHU that the local placement
+                // solver has already produced. For regular four-sided rooms it checks:
+                //   1) real physical AHU body + configured Maintenance Clearance
+                //      against the room clear rectangle;
+                //   2) the same required-clearance envelope against every Restricted
+                //      Area, reporting approximate overlap area.
+                if (!placementResult.IsNotConfigured)
+                {
+                    AhuPlacementViolationAnalyzerService.AnalysisResult violationResult =
+                        AhuPlacementViolationAnalyzerService.Analyze(
+                            doc,
+                            room,
+                            option,
+                            placementResult.CreatedElementId);
+
+                    if (violationResult != null &&
+                        violationResult.Evaluated &&
+                        violationResult.HasAnyViolation)
+                    {
+                        placementResult.MaintenanceSpaceFitStatus =
+                            violationResult.StatusCode;
+                        placementResult.MaintenanceSpaceFitWarningMessage =
+                            violationResult.BuildWarningMessage();
+
+                        // Keep the AHU visible for manual review and avoid attaching the
+                        // built-in pipe assembly to a placement that has a physical-space
+                        // or Restricted Area violation. No AHU geometry is changed here.
+                        placementResult.PlacementFeasible = false;
+                        placementResult.RetainedForManualReview = true;
+                    }
+                }
+                else
+                {
+                    DiagnosticRecorder.AppendDebug(
+                        "[AhuPlacementViolation] Skipped because AHU configuration is empty. RoomKey=" +
+                        roomKey + ", FamilyKey=" + familyKey +
+                        ", ElementId=" +
+                        (placementResult.CreatedElementId != null
+                            ? placementResult.CreatedElementId.IntegerValue.ToString(CultureInfo.InvariantCulture)
+                            : string.Empty));
+                }
+
                 ExecuteOnUiThread(() =>
                 {
                     DetailViewModel.HighlightedFamilyKey = familyKey;
-                    // Legacy local maintenance-space fit validation.
-                    // Temporarily disabled because AHU room-placement validation
-                    // is now provided by the external validation API.
-                    //
-                    // KEEP THIS CODE.
-                    // It may be re-enabled as fallback if the external API
-                    // cannot provide the required result reliably.
-                    // DetailViewModel.ApplyEquipmentPlacementFitResult(
-                    //     familyKey,
-                    //     placementResult.MaintenanceSpaceFitStatus,
-                    //     placementResult.MaintenanceSpaceFitWarningMessage);
+
+                    // AHU room placement is now solved locally in Revit/C#.
+                    // Publish the local Maintenance Space / physical-dimension result
+                    // back to the family card instead of relying on /api/check_room_fit.
+                    DetailViewModel.ApplyEquipmentPlacementFitResult(
+                        familyKey,
+                        placementResult.MaintenanceSpaceFitStatus,
+                        placementResult.MaintenanceSpaceFitWarningMessage);
                 });
 
                 // Built-in pipe template validation - one-connector anchor stage:
@@ -5467,7 +5423,13 @@ namespace CadToRevit.UI.Dockable
                 // with one AHU CHWS/CHWR connector. No rotation or mirroring is performed.
                 // ConnectTo is attempted only when the two connector directions already face
                 // each other; otherwise the assembly remains physically touching for review.
-                if (placeBuiltInPipeAssembly)
+                // A no-fit AHU can intentionally be retained for manual review.
+                // Do not attach the built-in pipe assembly to that temporary review
+                // position; pipework should only follow a placement that passed the
+                // room-fit constraints.
+                if (placeBuiltInPipeAssembly &&
+                    placementResult.PlacementFeasible &&
+                    !placementResult.IsNotConfigured)
                 {
                     RoomPipeSystemService.PlaceBuiltInPipeAssemblyResult pipeAssemblyResult =
                         RoomPipeSystemService.PlaceBuiltInPipeAssemblyAtEquipmentCenter(
@@ -5495,6 +5457,26 @@ namespace CadToRevit.UI.Dockable
                             roomKey + ", Message=" +
                             (pipeAssemblyResult != null ? pipeAssemblyResult.Message ?? string.Empty : "No result"));
                     }
+                }
+                else if (placeBuiltInPipeAssembly && placementResult.IsNotConfigured)
+                {
+                    DiagnosticRecorder.AppendDebug(
+                        "[BuiltInPipeAssembly] Skipped for not-configured AHU center placement. RoomKey=" +
+                        roomKey + ", FamilyKey=" + familyKey +
+                        ", ElementId=" +
+                        (placementResult.CreatedElementId != null
+                            ? placementResult.CreatedElementId.IntegerValue.ToString(CultureInfo.InvariantCulture)
+                            : string.Empty));
+                }
+                else if (placeBuiltInPipeAssembly && !placementResult.PlacementFeasible)
+                {
+                    DiagnosticRecorder.AppendDebug(
+                        "[BuiltInPipeAssembly] Skipped for manual-review AHU placement. RoomKey=" +
+                        roomKey + ", FamilyKey=" + familyKey +
+                        ", ElementId=" +
+                        (placementResult.CreatedElementId != null
+                            ? placementResult.CreatedElementId.IntegerValue.ToString(CultureInfo.InvariantCulture)
+                            : string.Empty));
                 }
 
                 RoutePlannerSessionCacheService.MarkDirty(doc, "Room equipment placement changed.");
@@ -8303,11 +8285,6 @@ namespace CadToRevit.UI.Dockable
             List<DoorMetricCandidate> candidates = new List<DoorMetricCandidate>();
             AddBoundaryWallInsertDoorMetricCandidates(doc, room, levelId, candidates);
             AddFallbackDoorMetricCandidates(doc, room, levelId, candidates);
-            // Imported DWG geometry does not create Revit OST_Doors elements.
-            // Keep native Revit/opening candidates as the stable first choice,
-            // then use the already detected DOOR-layer candidates only when a
-            // native door is unavailable.
-            AddDwgDoorMetricCandidates(doc, room, levelId, candidates);
 
             foreach (DoorMetricCandidate candidate in candidates)
             {
@@ -8320,10 +8297,7 @@ namespace CadToRevit.UI.Dockable
             }
 
             DoorMetricCandidate best = candidates
-                .Where(x => x != null &&
-                            IsPositiveFinite(x.WidthMm) &&
-                            (IsPositiveFinite(x.HeightMm) || string.Equals(x.Source, "DWG", StringComparison.OrdinalIgnoreCase)) &&
-                            IsAcceptableRoomDoorMetricCandidate(room, x))
+                .Where(x => x != null && IsPositiveFinite(x.WidthMm) && IsPositiveFinite(x.HeightMm) && IsAcceptableRoomDoorMetricCandidate(room, x))
                 .OrderBy(x => x.Priority)
                 .ThenBy(x => x.BoundaryDistance)
                 .FirstOrDefault();
@@ -8461,329 +8435,6 @@ namespace CadToRevit.UI.Dockable
             }
         }
 
-        private static void AddDwgDoorMetricCandidates(
-            Document doc,
-            RoomSemanticRecord room,
-            ElementId levelId,
-            List<DoorMetricCandidate> candidates)
-        {
-            if (doc == null || room == null || candidates == null)
-            {
-                return;
-            }
-
-            ImportInstance import = ResolveCurrentDwgImportInstance(doc);
-            if (import == null)
-            {
-                DiagnosticRecorder.AppendDebug(
-                    "[RoomDoorMetric] DWG fallback skipped: no active ImportInstance.");
-                return;
-            }
-
-            foreach (DoorMetricCandidate dwgCandidate in GetDwgDoorMetricCandidates(doc, import))
-            {
-                if (dwgCandidate == null || dwgCandidate.Center == null ||
-                    !IsPositiveFinite(dwgCandidate.WidthMm))
-                {
-                    continue;
-                }
-
-                if (!IsElementNearRoomLevel(doc, import, levelId) ||
-                    !IsDoorCenterNearRoomBoundary(room, dwgCandidate.Center, 800.0))
-                {
-                    continue;
-                }
-
-                candidates.Add(dwgCandidate);
-            }
-        }
-
-        private static List<DoorMetricCandidate> GetDwgDoorMetricCandidates(
-            Document doc,
-            ImportInstance import)
-        {
-            if (doc == null || import == null)
-            {
-                return new List<DoorMetricCandidate>();
-            }
-
-            DwgSessionInfo session = DwgSessionManager.Get(doc);
-            string cacheKey = BuildDwgDoorMetricCacheKey(doc, import, session);
-            lock (SyncRoot)
-            {
-                if (_dwgDoorMetricCache.TryGetValue(cacheKey, out List<DoorMetricCandidate> cached))
-                {
-                    return cached;
-                }
-            }
-
-            List<DoorMetricCandidate> result = new List<DoorMetricCandidate>();
-            try
-            {
-                DoorDetectResult detection = DoorCandidateDetector.Detect(
-                    doc,
-                    import,
-                    new DoorDetectSettings());
-
-                List<DoorCandidate> detectedDoors = new List<DoorCandidate>();
-                AppendUniqueDwgDoorCandidates(detectedDoors, detection?.Candidates);
-
-                // The default layer map intentionally stays conservative.  A
-                // DWG can still use common AIA-style names such as A-DOOR or
-                // ARCH-DOOR, so scan only explicitly door-named raw layers as
-                // an additive fallback instead of treating every CAD line as
-                // a possible door.
-                foreach (string rawLayerName in (session?.DwgLayers ?? new List<string>())
-                    .Where(IsLikelyDwgDoorLayer)
-                    .Distinct(StringComparer.OrdinalIgnoreCase))
-                {
-                    if (string.Equals(rawLayerName, "DOOR", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(rawLayerName, "DR", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(rawLayerName, "D", StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
-
-                    try
-                    {
-                        DoorDetectResult layerDetection = DoorCandidateDetector.DetectByRawLayer(
-                            doc,
-                            import,
-                            new DoorDetectSettings(),
-                            rawLayerName);
-                        AppendUniqueDwgDoorCandidates(detectedDoors, layerDetection?.Candidates);
-                    }
-                    catch (Exception layerEx)
-                    {
-                        DiagnosticRecorder.AppendDebug(
-                            "[RoomDoorMetric] DWG raw door layer skipped, layer=" + rawLayerName +
-                            ", error=" + layerEx.Message);
-                    }
-                }
-
-                foreach (DoorCandidate door in detectedDoors)
-                {
-                    if (door == null)
-                    {
-                        continue;
-                    }
-
-                    XYZ center = door.OpeningCenterPoint ??
-                                 door.CombinedCenter ??
-                                 door.CenterPoint ??
-                                 door.ProjectedPointOnWall ??
-                                 door.FinalPlacementPoint;
-                    if (center == null)
-                    {
-                        continue;
-                    }
-
-                    double widthMm = ResolveDwgDoorWidthMm(door);
-                    if (!IsPositiveFinite(widthMm))
-                    {
-                        continue;
-                    }
-
-                    XYZ direction = ResolveDwgDoorDirection(doc, door);
-                    double heightMm = IsPositiveFinite(door.FinalHeightMmApplied)
-                        ? door.FinalHeightMmApplied
-                        : 0.0;
-                    result.Add(new DoorMetricCandidate
-                    {
-                        Center = center,
-                        Direction = direction,
-                        WidthMm = widthMm,
-                        HeightMm = heightMm,
-                        Priority = 60,
-                        ElementId = null,
-                        WidthSource = "DWG" + (string.IsNullOrWhiteSpace(door.WidthSource) ? string.Empty : "." + door.WidthSource),
-                        HeightSource = heightMm > 0.0 ? "DWG.FinalHeightMmApplied" : string.Empty,
-                        Source = "DWG"
-                    });
-                }
-
-                DiagnosticRecorder.AppendDebug(
-                    "[RoomDoorMetric] DWG fallback detected " + result.Count.ToString(CultureInfo.InvariantCulture) +
-                    " candidate(s), importId=" + import.Id.IntegerValue.ToString(CultureInfo.InvariantCulture) +
-                    ", segments=" + (detection != null ? detection.DoorSegmentsTotal.ToString(CultureInfo.InvariantCulture) : "0") +
-                    ", rawLayerFallback=true");
-            }
-            catch (Exception ex)
-            {
-                DiagnosticRecorder.AppendDebug(
-                    "[RoomDoorMetric] DWG fallback failed: " + ex);
-            }
-
-            lock (SyncRoot)
-            {
-                _dwgDoorMetricCache[cacheKey] = result;
-            }
-
-            return result;
-        }
-
-        private static void AppendUniqueDwgDoorCandidates(
-            List<DoorCandidate> destination,
-            IEnumerable<DoorCandidate> source)
-        {
-            if (destination == null || source == null)
-            {
-                return;
-            }
-
-            foreach (DoorCandidate candidate in source)
-            {
-                if (candidate == null)
-                {
-                    continue;
-                }
-
-                XYZ point = candidate.OpeningCenterPoint ??
-                            candidate.CombinedCenter ??
-                            candidate.CenterPoint ??
-                            candidate.ProjectedPointOnWall ??
-                            candidate.FinalPlacementPoint;
-                double widthMm = ResolveDwgDoorWidthMm(candidate);
-                if (point == null || !IsPositiveFinite(widthMm))
-                {
-                    continue;
-                }
-
-                bool duplicate = destination.Any(existing =>
-                {
-                    XYZ existingPoint = existing?.OpeningCenterPoint ??
-                                         existing?.CombinedCenter ??
-                                         existing?.CenterPoint ??
-                                         existing?.ProjectedPointOnWall ??
-                                         existing?.FinalPlacementPoint;
-                    double existingWidthMm = ResolveDwgDoorWidthMm(existing);
-                    return existingPoint != null &&
-                           existingPoint.DistanceTo(point) <= UnitUtils.ConvertToInternalUnits(100.0, UnitTypeId.Millimeters) &&
-                           Math.Abs(existingWidthMm - widthMm) <= 150.0;
-                });
-                if (!duplicate)
-                {
-                    destination.Add(candidate);
-                }
-            }
-        }
-
-        private static double ResolveDwgDoorWidthMm(DoorCandidate door)
-        {
-            if (door == null)
-            {
-                return 0.0;
-            }
-
-            return IsPositiveFinite(door.OpeningWidthMm)
-                ? door.OpeningWidthMm
-                : IsPositiveFinite(door.CombinedWidthMm)
-                    ? door.CombinedWidthMm
-                    : IsPositiveFinite(door.FinalWidthMmApplied)
-                        ? door.FinalWidthMmApplied
-                        : IsPositiveFinite(door.VirtualOpeningWidthMm)
-                            ? door.VirtualOpeningWidthMm
-                            : door.WidthMm;
-        }
-
-        private static bool IsLikelyDwgDoorLayer(string rawLayerName)
-        {
-            if (string.IsNullOrWhiteSpace(rawLayerName))
-            {
-                return false;
-            }
-
-            string value = rawLayerName.Trim().ToUpperInvariant();
-            return value.Contains("DOOR") ||
-                   value == "D" ||
-                   value == "DR" ||
-                   value.EndsWith("-D", StringComparison.Ordinal) ||
-                   value.EndsWith("_D", StringComparison.Ordinal);
-        }
-
-        private static string BuildDwgDoorMetricCacheKey(
-            Document doc,
-            ImportInstance import,
-            DwgSessionInfo session)
-        {
-            string documentKey = (doc.PathName ?? string.Empty) + "|" + (doc.Title ?? string.Empty);
-            string fingerprint = session != null
-                ? (session.LastKnownFingerprint ?? string.Empty) + "|" + session.ImportTime.Ticks.ToString(CultureInfo.InvariantCulture)
-                : string.Empty;
-            return documentKey + "|" + import.Id.IntegerValue.ToString(CultureInfo.InvariantCulture) + "|" + fingerprint;
-        }
-
-        private static ImportInstance ResolveCurrentDwgImportInstance(Document doc)
-        {
-            if (doc == null)
-            {
-                return null;
-            }
-
-            DwgSessionInfo session = DwgSessionManager.Get(doc);
-            if (session?.LinkInstanceId != null && session.LinkInstanceId != ElementId.InvalidElementId)
-            {
-                ImportInstance current = doc.GetElement(session.LinkInstanceId) as ImportInstance;
-                if (current != null)
-                {
-                    return current;
-                }
-            }
-
-            ImportInstance linked = DwgImportService.GetLinkedImportInstances(doc)
-                .OrderByDescending(x => x.Id.IntegerValue)
-                .FirstOrDefault();
-            return linked ?? new FilteredElementCollector(doc)
-                .OfClass(typeof(ImportInstance))
-                .Cast<ImportInstance>()
-                .OrderByDescending(x => x.Id.IntegerValue)
-                .FirstOrDefault();
-        }
-
-        private static XYZ ResolveDwgDoorDirection(Document doc, DoorCandidate door)
-        {
-            if (door == null)
-            {
-                return null;
-            }
-
-            if (IsUsableXyDirection(door.WallDirHint))
-            {
-                return NormalizeXyDirection(door.WallDirHint);
-            }
-
-            if (door.MatchedWallId != null && door.MatchedWallId != ElementId.InvalidElementId)
-            {
-                XYZ wallDirection = ResolveWallDirection(doc?.GetElement(door.MatchedWallId) as Wall);
-                if (IsUsableXyDirection(wallDirection))
-                {
-                    return wallDirection;
-                }
-            }
-
-            if (door.LeftEdgePoint != null && door.RightEdgePoint != null)
-            {
-                XYZ edgeDirection = door.RightEdgePoint - door.LeftEdgePoint;
-                if (IsUsableXyDirection(edgeDirection))
-                {
-                    return NormalizeXyDirection(edgeDirection);
-                }
-            }
-
-            return null;
-        }
-
-        private static XYZ NormalizeXyDirection(XYZ value)
-        {
-            if (!IsUsableXyDirection(value))
-            {
-                return null;
-            }
-
-            double length = Math.Sqrt(value.X * value.X + value.Y * value.Y);
-            return new XYZ(value.X / length, value.Y / length, 0.0);
-        }
-
         private static bool TryBuildDoorMetricCandidate(
             Document doc,
             Element element,
@@ -8842,7 +8493,6 @@ namespace CadToRevit.UI.Dockable
                 HeightMm = heightMm,
                 Priority = priority,
                 ElementId = element.Id,
-                Direction = ResolveWallDirection(hostWall),
                 WidthSource = widthSource,
                 HeightSource = heightSource
             };
@@ -8964,16 +8614,6 @@ namespace CadToRevit.UI.Dockable
             XYZ direction = line.Direction;
             double length = Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y);
             return length > 1.0e-9 ? new XYZ(direction.X / length, direction.Y / length, 0.0) : null;
-        }
-
-        private static bool IsUsableXyDirection(XYZ value)
-        {
-            return value != null &&
-                !double.IsNaN(value.X) &&
-                !double.IsNaN(value.Y) &&
-                !double.IsInfinity(value.X) &&
-                !double.IsInfinity(value.Y) &&
-                Math.Sqrt(value.X * value.X + value.Y * value.Y) > 1.0e-9;
         }
 
         private static bool IsDoorMetricElement(Element element)
@@ -9466,8 +9106,6 @@ namespace CadToRevit.UI.Dockable
         {
             public XYZ Center { get; set; }
 
-            public XYZ Direction { get; set; }
-
             public double WidthMm { get; set; }
 
             public double HeightMm { get; set; }
@@ -9481,8 +9119,6 @@ namespace CadToRevit.UI.Dockable
             public string WidthSource { get; set; }
 
             public string HeightSource { get; set; }
-
-            public string Source { get; set; }
         }
 
         private static string FormatArea(double areaM2)

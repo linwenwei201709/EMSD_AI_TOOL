@@ -1,6 +1,7 @@
-﻿using Autodesk.Revit.DB;
+using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
 using Autodesk.Revit.UI;
+using CadToRevit.Models.Rooms;
 using CadToRevit.Models.Rooms.Semantic;
 using CadToRevit.Services.Diagnostics;
 using System;
@@ -34,6 +35,19 @@ namespace CadToRevit.Services.Rooms
             public string MaintenanceSpaceFitStatus { get; set; }
             public string MaintenanceSpaceFitWarningMessage { get; set; }
             public bool MaintenanceSpaceFitPassed { get; set; } = true;
+
+            // Placement operation can succeed even when the configured room-fit
+            // constraints are not feasible.  In that case the AHU is intentionally
+            // kept in Revit as a review placement so the user can visually inspect
+            // where the body / maintenance envelope exceeds the room.
+            public bool PlacementFeasible { get; set; } = true;
+            public bool RetainedForManualReview { get; set; }
+
+            // When both Sub-Module and Maintenance configurations are empty, the
+            // family is still intentionally placed at the resolved room center.
+            // No room-fit / Restricted Area analysis is meaningful in this fallback
+            // mode because the configured clearance envelope does not exist.
+            public bool IsNotConfigured { get; set; }
         }
 
         internal static PlacementResult PlaceOrReplace(
@@ -203,11 +217,73 @@ namespace CadToRevit.Services.Rooms
             }
             else
             {
-                // Legacy fallback only for flows that do not have an API orientation.
-                // Keep this code for backward compatibility (saved-plan/detail restore,
-                // API failure, etc.). It is NOT used by the current Select -> room-fit API
-                // insertion path when orientation_deg is present.
-                if (!TryOrientPlacedEquipmentTowardRoomDoor(
+                // Explicit fallback for an AHU family that has not been configured in
+                // Family Library yet.  If BOTH Sub-Modules and Maintenance are empty,
+                // keep the freshly-created family exactly at the resolved room center
+                // and preserve the RFA's native/default orientation.  Do not require
+                // Door Side / Wall Side / Maintenance checks in this mode.
+                IReadOnlyList<RoomCustomFamilySubModuleDto> configuredSubModules =
+                    RoomCustomFamilyCatalogService.GetSubModules(option.Key);
+                IReadOnlyList<RoomCustomFamilyMaintenanceSpaceDto> configuredMaintenance =
+                    RoomCustomFamilyCatalogService.GetMaintenanceSpaces(option.Key);
+
+                bool hasSubModules =
+                    configuredSubModules != null && configuredSubModules.Count > 0;
+                bool hasMaintenance =
+                    configuredMaintenance != null && configuredMaintenance.Count > 0;
+
+                if (!hasSubModules && !hasMaintenance)
+                {
+                    // Best-effort correction: CreateInstance() receives the room-center
+                    // point, but some AHU RFAs have an insertion origin that is offset
+                    // from the actual physical body center.  Center the detected body
+                    // without rotating it.  A geometry-read failure is not fatal in
+                    // this fallback mode; the instance remains at its original
+                    // room-center insertion point and is still considered placed.
+                    string centerMode;
+                    string centerWarning;
+                    TryCenterUnconfiguredAhuAtRoomCenter(
+                        doc,
+                        room,
+                        result.CreatedElementId,
+                        result.PlacementPoint,
+                        out centerMode,
+                        out centerWarning);
+
+                    result.IsNotConfigured = true;
+                    result.PlacementFeasible = true;
+                    result.RetainedForManualReview = false;
+                    result.MaintenanceSpaceFitStatus = "NotConfigured";
+                    result.MaintenanceSpaceFitWarningMessage = string.Empty;
+                    result.MaintenanceSpaceFitPassed = true;
+                    result.ErrorCode = string.Empty;
+                    result.Message =
+                        "Placed at room center. Sub-Module and Maintenance are not configured.";
+
+                    DiagnosticRecorder.AppendDebug(
+                        "[AhuLocalPlacement] PlacementMode=CenterNotConfigured, RoomKey=" +
+                        (room != null ? room.Key ?? string.Empty : string.Empty) +
+                        ", FamilyKey=" + (option != null ? option.Key ?? string.Empty : string.Empty) +
+                        ", ElementId=" + FormatElementId(result.CreatedElementId) +
+                        ", PlacementPoint=" + FormatPoint(result.PlacementPoint) +
+                        ", CenterMode=" + (centerMode ?? string.Empty) +
+                        ", CenterWarning=" + (centerWarning ?? string.Empty) +
+                        ", SubModules=0, MaintenanceSpaces=0");
+
+                    return result;
+                }
+
+                // Current AHU placement path is solved locally in Revit.
+                //
+                // The configured Maintenance side is authoritative:
+                //   - IsDoorSide decides which AHU-local side must face the room door.
+                //   - IsWallSide + DimensionMm decides the exact AHU-body-to-wall gap.
+                //   - The real transparent/pink Maintenance Space solids in the family are
+                //     used as the final room-boundary clearance envelope whenever available.
+                //
+                // No /api/check_room_fit orientation or XY result is required for this path.
+                bool retainedForManualReview;
+                if (!TryPlaceAhuByConfiguredRoomRules(
                         doc,
                         room,
                         option,
@@ -215,14 +291,47 @@ namespace CadToRevit.Services.Rooms
                         result.PlacementPoint,
                         result.LevelId,
                         out orientError,
-                        out maintenanceSpaceCheck) &&
-                    !string.IsNullOrWhiteSpace(orientError))
+                        out maintenanceSpaceCheck,
+                        out retainedForManualReview))
                 {
                     DiagnosticRecorder.AppendDebug(
-                        "[RoomCustomFamily] Legacy door-facing orientation skipped. RoomKey=" + room.Key +
+                        "[AhuLocalPlacement] Local placement failed. RoomKey=" + room.Key +
                         ", FamilyKey=" + option.Key +
                         ", ElementId=" + (result.CreatedElementId != null ? result.CreatedElementId.IntegerValue.ToString() : string.Empty) +
-                        ", Error=" + orientError);
+                        ", RetainedForManualReview=" + retainedForManualReview +
+                        ", Error=" + (orientError ?? string.Empty));
+
+                    // A geometric no-fit is not an insertion failure. Keep the best
+                    // wall-aligned / door-facing placement in Revit so the user can
+                    // inspect exactly which body or maintenance region exceeds the room.
+                    // Technical/configuration failures still remove the temporary AHU.
+                    if (retainedForManualReview &&
+                        result.CreatedElementId != null &&
+                        result.CreatedElementId != ElementId.InvalidElementId &&
+                        doc.GetElement(result.CreatedElementId) != null)
+                    {
+                        result.Succeeded = true;
+                        result.PlacementFeasible = false;
+                        result.RetainedForManualReview = true;
+                        result.ErrorCode = "LocalPlacementExceeded";
+                        result.Message = string.IsNullOrWhiteSpace(orientError)
+                            ? "No feasible AHU placement was found; the AHU was retained for manual review."
+                            : orientError;
+                        ApplyMaintenanceSpaceFitResult(result, room, option, maintenanceSpaceCheck);
+                        return result;
+                    }
+
+                    TryDeleteFailedPlacementInstance(doc, result.CreatedElementId);
+                    result.CreatedElementId = ElementId.InvalidElementId;
+                    result.Succeeded = false;
+                    result.PlacementFeasible = false;
+                    result.RetainedForManualReview = false;
+                    result.ErrorCode = "LocalPlacementFailed";
+                    result.Message = string.IsNullOrWhiteSpace(orientError)
+                        ? "No feasible AHU placement was found in the selected room."
+                        : orientError;
+                    ApplyMaintenanceSpaceFitResult(result, room, option, maintenanceSpaceCheck);
+                    return result;
                 }
             }
 
@@ -970,6 +1079,2057 @@ namespace CadToRevit.Services.Rooms
             return 180.0;
         }
 
+
+        private static bool TryCenterUnconfiguredAhuAtRoomCenter(
+            Document doc,
+            RoomSemanticRecord room,
+            ElementId instanceId,
+            XYZ fallbackRoomCenter,
+            out string mode,
+            out string warning)
+        {
+            mode = "InsertionPoint";
+            warning = string.Empty;
+
+            if (doc == null ||
+                room == null ||
+                instanceId == null ||
+                instanceId == ElementId.InvalidElementId)
+            {
+                warning = "Invalid center-placement context.";
+                return false;
+            }
+
+            FamilyInstance instance = doc.GetElement(instanceId) as FamilyInstance;
+            if (instance == null)
+            {
+                warning = "Placed AHU family instance could not be resolved.";
+                return false;
+            }
+
+            XYZ roomCenter;
+            if (!TryResolveRoomCenterXY(room, out roomCenter) || roomCenter == null)
+            {
+                roomCenter = fallbackRoomCenter;
+            }
+
+            if (roomCenter == null)
+            {
+                warning = "Room center could not be resolved.";
+                return false;
+            }
+
+            string coreMode;
+            XYZ coreCenter = ResolveEquipmentCoreCenterForFinalPlacement(
+                                 doc,
+                                 instance,
+                                 roomCenter,
+                                 out coreMode)
+                             ?? GetElementBoundingBoxCenter(instance);
+
+            if (coreCenter == null)
+            {
+                warning = "AHU physical body center could not be resolved.";
+                return false;
+            }
+
+            XYZ delta = ResolveHorizontalCenteringDelta(coreCenter, roomCenter);
+            if (delta == null ||
+                delta.GetLength() <=
+                UnitUtils.ConvertToInternalUnits(1.0, UnitTypeId.Millimeters))
+            {
+                mode = "BodyCenterAlreadyAtRoomCenter/" + (coreMode ?? string.Empty);
+                return true;
+            }
+
+            try
+            {
+                using (Transaction tx = new Transaction(doc, "Center Unconfigured AHU"))
+                {
+                    tx.Start();
+                    ElementTransformUtils.MoveElement(doc, instance.Id, delta);
+                    doc.Regenerate();
+                    tx.Commit();
+                }
+
+                mode = "BodyCenterToRoomCenter/" + (coreMode ?? string.Empty);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                warning = ex.Message;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Solves the normal AHU room placement entirely in Revit/C#.
+        ///
+        /// The Family Library configuration is the source of truth:
+        /// 1) SubModules (grid row/column + Name) are used to recover the AHU-local
+        ///    Right/Bottom axes from the actual nested family geometry.
+        /// 2) The Maintenance row marked IsDoorSide decides which local side faces
+        ///    the selected room door.
+        /// 3) Every IsWallSide row uses DimensionMm as the exact AHU BODY-to-wall gap.
+        /// 4) The real transparent "Maintenance Space" solids in the loaded RFA are
+        ///    used as the final clearance envelope.  When those solids cannot be read,
+        ///    equivalent side strips are synthesized from the catalog dimensions.
+        ///
+        /// This path deliberately does not call /api/check_room_fit.
+        /// </summary>
+        private static bool TryPlaceAhuByConfiguredRoomRules(
+            Document doc,
+            RoomSemanticRecord room,
+            RoomCustomFamilyOption option,
+            ElementId instanceId,
+            XYZ initialTargetCenter,
+            ElementId levelId,
+            out string error,
+            out MaintenanceSpaceFitResult maintenanceSpaceCheck,
+            out bool retainedForManualReview)
+        {
+            error = string.Empty;
+            retainedForManualReview = false;
+            maintenanceSpaceCheck = new MaintenanceSpaceFitResult
+            {
+                Status = "NotChecked",
+                Mode = "RevitLocal",
+                OutsideToleranceMm = 20.0,
+                TouchToleranceMm = 25.0
+            };
+
+            if (doc == null || room == null || option == null ||
+                instanceId == null || instanceId == ElementId.InvalidElementId ||
+                initialTargetCenter == null)
+            {
+                error = "Invalid local AHU placement context.";
+                return false;
+            }
+
+            FamilyInstance instance = doc.GetElement(instanceId) as FamilyInstance;
+            if (instance == null)
+            {
+                error = "Placed AHU family instance could not be resolved.";
+                return false;
+            }
+
+            IReadOnlyList<RoomCustomFamilyMaintenanceSpaceDto> maintenanceRows =
+                RoomCustomFamilyCatalogService.GetMaintenanceSpaces(option.Key);
+            RoomCustomFamilyMaintenanceSpaceDto doorRule = maintenanceRows != null
+                ? maintenanceRows
+                    .Where(x => x != null && x.IsDoorSide)
+                    .OrderBy(x => x.Sequence)
+                    .FirstOrDefault()
+                : null;
+
+            if (doorRule == null || string.IsNullOrWhiteSpace(doorRule.Side))
+            {
+                error = "No Maintenance side is configured as Door Side for this AHU.";
+                maintenanceSpaceCheck.Status = "Skipped";
+                maintenanceSpaceCheck.Mode = "DoorSideMissing";
+                return false;
+            }
+
+            XYZ doorCenter;
+            string doorSource;
+            ElementId doorElementId;
+            if (!TryResolveRoomDoorCenter(
+                    doc,
+                    room,
+                    initialTargetCenter,
+                    levelId,
+                    out doorCenter,
+                    out doorSource,
+                    out doorElementId))
+            {
+                error = "The room door could not be resolved for AHU placement.";
+                maintenanceSpaceCheck.Status = "Skipped";
+                maintenanceSpaceCheck.Mode = "DoorNotFound";
+                return false;
+            }
+
+            XYZ roomCenter;
+            if (!TryResolveRoomCenterXY(room, out roomCenter) || roomCenter == null)
+            {
+                roomCenter = initialTargetCenter;
+            }
+
+            XYZ doorBoundaryPoint;
+            XYZ doorOutwardNormal;
+            XYZ doorWallTangent;
+            if (!TryResolveDoorBoundaryFrame(
+                    room,
+                    roomCenter,
+                    doorCenter,
+                    out doorBoundaryPoint,
+                    out doorOutwardNormal,
+                    out doorWallTangent))
+            {
+                error = "The room door wall direction could not be resolved.";
+                maintenanceSpaceCheck.Status = "Skipped";
+                maintenanceSpaceCheck.Mode = "DoorWallDirectionMissing";
+                return false;
+            }
+
+            XYZ localRight;
+            XYZ localBottom;
+            string localAxisMode;
+            if (!TryResolveConfiguredAhuLocalAxes(
+                    doc,
+                    instance,
+                    option.Key,
+                    out localRight,
+                    out localBottom,
+                    out localAxisMode))
+            {
+                error = "AHU local axes could not be resolved from the configured Sub-Modules.";
+                maintenanceSpaceCheck.Status = "Skipped";
+                maintenanceSpaceCheck.Mode = "SubModuleAxisMissing";
+                return false;
+            }
+
+            XYZ configuredDoorDirection = ResolveConfiguredAhuSideDirection(
+                doorRule.Side,
+                localRight,
+                localBottom);
+            if (!IsUsableDirection(configuredDoorDirection))
+            {
+                error = "The configured AHU Door Side is invalid: " + (doorRule.Side ?? string.Empty) + ".";
+                maintenanceSpaceCheck.Status = "Skipped";
+                maintenanceSpaceCheck.Mode = "DoorSideInvalid";
+                return false;
+            }
+
+            string initialCoreMode;
+            XYZ initialCoreCenter = ResolveEquipmentCoreCenterForFinalPlacement(
+                                        doc,
+                                        instance,
+                                        initialTargetCenter,
+                                        out initialCoreMode)
+                                    ?? GetElementBoundingBoxCenter(instance)
+                                    ?? initialTargetCenter;
+
+            double rotationAngle = SignedAngleOnXY(
+                configuredDoorDirection.Normalize(),
+                doorOutwardNormal.Normalize());
+
+            Transaction tx = null;
+            try
+            {
+                tx = new Transaction(doc, "Place AHU By Room Rules");
+                tx.Start();
+
+                if (Math.Abs(rotationAngle) > 1e-7)
+                {
+                    Line rotationAxis = Line.CreateBound(
+                        initialCoreCenter,
+                        initialCoreCenter + XYZ.BasisZ);
+                    ElementTransformUtils.RotateElement(
+                        doc,
+                        instance.Id,
+                        rotationAxis,
+                        rotationAngle);
+                    doc.Regenerate();
+                }
+
+                // The family insertion origin is not the AHU body center.  After the
+                // required door-facing rotation, first bring the actual AHU body back
+                // to the recognized room center.  Wall rules and clearance fitting are
+                // then solved from this neutral position.
+                string centeredCoreMode;
+                XYZ coreCenterAfterRotation = ResolveEquipmentCoreCenterForFinalPlacement(
+                                                  doc,
+                                                  instance,
+                                                  roomCenter,
+                                                  out centeredCoreMode)
+                                              ?? GetElementBoundingBoxCenter(instance)
+                                              ?? roomCenter;
+                XYZ centerDelta = ResolveHorizontalCenteringDelta(
+                    coreCenterAfterRotation,
+                    roomCenter);
+                if (centerDelta != null &&
+                    centerDelta.GetLength() >
+                    UnitUtils.ConvertToInternalUnits(1.0, UnitTypeId.Millimeters))
+                {
+                    ElementTransformUtils.MoveElement(doc, instance.Id, centerDelta);
+                    doc.Regenerate();
+                }
+
+                // Re-read local axes after rotation.  Translation does not alter them,
+                // but re-reading avoids carrying a stale pre-rotation basis.
+                if (!TryResolveConfiguredAhuLocalAxes(
+                        doc,
+                        instance,
+                        option.Key,
+                        out localRight,
+                        out localBottom,
+                        out localAxisMode))
+                {
+                    throw new InvalidOperationException(
+                        "AHU local axes were lost after rotation.");
+                }
+
+                string wallAlignError;
+                if (!TryAlignConfiguredWallSideGaps(
+                        doc,
+                        room,
+                        instance,
+                        maintenanceRows,
+                        localRight,
+                        localBottom,
+                        out wallAlignError))
+                {
+                    throw new InvalidOperationException(
+                        string.IsNullOrWhiteSpace(wallAlignError)
+                            ? "Configured AHU wall clearance could not be satisfied."
+                            : wallAlignError);
+                }
+
+                List<XYZ> corePoints = CollectEquipmentCorePlanPoints(
+                    doc,
+                    instance,
+                    out string corePointMode);
+                List<XYZ> coreHull = ComputeConvexHullXY(corePoints);
+                if (coreHull == null || coreHull.Count < 3)
+                {
+                    throw new InvalidOperationException(
+                        "AHU body footprint could not be resolved.");
+                }
+
+                List<MaintenanceSpaceFootprint> maintenanceFootprints =
+                    CollectMaintenanceSpaceFootprints(
+                        doc,
+                        instance,
+                        out string maintenanceMode);
+
+                string currentCoreMode;
+                XYZ currentCoreCenter = ResolveEquipmentCoreCenterForFinalPlacement(
+                                            doc,
+                                            instance,
+                                            roomCenter,
+                                            out currentCoreMode)
+                                        ?? GetElementBoundingBoxCenter(instance)
+                                        ?? roomCenter;
+
+                if (maintenanceFootprints == null || maintenanceFootprints.Count == 0)
+                {
+                    maintenanceFootprints = BuildCatalogMaintenanceFootprints(
+                        currentCoreCenter,
+                        coreHull,
+                        maintenanceRows,
+                        localRight,
+                        localBottom);
+                    maintenanceMode =
+                        maintenanceFootprints.Count > 0
+                            ? "CatalogMaintenanceFallback"
+                            : "MaintenanceSpaceNotAvailable";
+                }
+
+                XYZ candidateTranslation;
+                string candidateMode;
+                if (!TryFindFeasibleLocalPlacementTranslation(
+                        room,
+                        currentCoreCenter,
+                        coreHull,
+                        maintenanceFootprints,
+                        maintenanceRows,
+                        localRight,
+                        localBottom,
+                        out candidateTranslation,
+                        out candidateMode))
+                {
+                    maintenanceSpaceCheck.Status = "Exceeded";
+                    maintenanceSpaceCheck.Mode =
+                        "RevitLocal/" + (maintenanceMode ?? string.Empty) +
+                        "/NoFeasibleCandidate/ReviewPlacement";
+                    maintenanceSpaceCheck.SolidCount =
+                        maintenanceFootprints != null ? maintenanceFootprints.Count : 0;
+
+                    error =
+                        "No feasible AHU placement was found. The AHU body / Maintenance Space envelope cannot fit inside the selected room while keeping the configured Door Side and Wall Side distances.";
+
+                    // At this point the AHU has already been rotated so the configured
+                    // Door Side faces the room door, centered, and aligned to every
+                    // resolvable Wall Side gap.  That is the most useful deterministic
+                    // review position when no fully feasible XY translation exists.
+                    // Commit it instead of rolling it back/deleting it.
+                    retainedForManualReview = true;
+                    DiagnosticRecorder.AppendDebug(
+                        "[AhuLocalPlacement] No feasible candidate; retaining wall-aligned review placement. RoomKey=" +
+                        (room != null ? room.Key ?? string.Empty : string.Empty) +
+                        ", FamilyKey=" + (option != null ? option.Key ?? string.Empty : string.Empty) +
+                        ", ElementId=" + FormatElementId(instance.Id) +
+                        ", DoorSide=" + (doorRule != null ? doorRule.Side ?? string.Empty : string.Empty) +
+                        ", MaintenanceMode=" + (maintenanceMode ?? string.Empty));
+                    tx.Commit();
+                    return false;
+                }
+
+                if (candidateTranslation != null &&
+                    candidateTranslation.GetLength() >
+                    UnitUtils.ConvertToInternalUnits(1.0, UnitTypeId.Millimeters))
+                {
+                    ElementTransformUtils.MoveElement(
+                        doc,
+                        instance.Id,
+                        candidateTranslation);
+                    doc.Regenerate();
+                }
+
+                // Final strict validation against the actual moved geometry.
+                List<XYZ> finalCorePoints = CollectEquipmentCorePlanPoints(
+                    doc,
+                    instance,
+                    out string finalCoreMode);
+                List<XYZ> finalCoreHull = ComputeConvexHullXY(finalCorePoints);
+                List<MaintenanceSpaceFootprint> finalMaintenance =
+                    CollectMaintenanceSpaceFootprints(
+                        doc,
+                        instance,
+                        out string finalMaintenanceMode);
+
+                string finalCenterMode;
+                XYZ finalCoreCenter = ResolveEquipmentCoreCenterForFinalPlacement(
+                                          doc,
+                                          instance,
+                                          roomCenter,
+                                          out finalCenterMode)
+                                      ?? GetElementBoundingBoxCenter(instance)
+                                      ?? roomCenter;
+
+                if (finalMaintenance == null || finalMaintenance.Count == 0)
+                {
+                    finalMaintenance = BuildCatalogMaintenanceFootprints(
+                        finalCoreCenter,
+                        finalCoreHull,
+                        maintenanceRows,
+                        localRight,
+                        localBottom);
+                    finalMaintenanceMode =
+                        finalMaintenance.Count > 0
+                            ? "CatalogMaintenanceFallback"
+                            : "MaintenanceSpaceNotAvailable";
+                }
+
+                string finalFitReason;
+                bool finalGeometryFits = IsLocalPlacementGeometryInsideRoom(
+                    room,
+                    finalCoreHull,
+                    finalMaintenance,
+                    XYZ.Zero,
+                    out finalFitReason);
+
+                string finalWallReason;
+                bool finalWallFits = ValidateConfiguredWallSideGaps(
+                    room,
+                    finalCoreCenter,
+                    finalCoreHull,
+                    maintenanceRows,
+                    localRight,
+                    localBottom,
+                    35.0,
+                    out finalWallReason);
+
+                if (!finalGeometryFits || !finalWallFits)
+                {
+                    maintenanceSpaceCheck.Status = "Exceeded";
+                    maintenanceSpaceCheck.Mode =
+                        "RevitLocal/FinalValidation/" +
+                        (finalMaintenanceMode ?? string.Empty) +
+                        "/ReviewPlacement";
+
+                    error = !string.IsNullOrWhiteSpace(finalWallReason)
+                        ? finalWallReason
+                        : (!string.IsNullOrWhiteSpace(finalFitReason)
+                            ? finalFitReason
+                            : "Final AHU placement validation failed.");
+
+                    // A candidate was found and physically moved, but the final strict
+                    // validation still reports overflow/touching. Preserve this exact
+                    // candidate for visual/manual inspection instead of rolling it back.
+                    retainedForManualReview = true;
+                    DiagnosticRecorder.AppendDebug(
+                        "[AhuLocalPlacement] Final validation exceeded; retaining candidate for manual review. RoomKey=" +
+                        (room != null ? room.Key ?? string.Empty : string.Empty) +
+                        ", FamilyKey=" + (option != null ? option.Key ?? string.Empty : string.Empty) +
+                        ", ElementId=" + FormatElementId(instance.Id) +
+                        ", GeometryFits=" + finalGeometryFits +
+                        ", WallFits=" + finalWallFits +
+                        ", Reason=" + (error ?? string.Empty));
+                    tx.Commit();
+                    return false;
+                }
+
+                maintenanceSpaceCheck.Status = "OK";
+                maintenanceSpaceCheck.Mode =
+                    "RevitLocal;Axes=" + (localAxisMode ?? string.Empty) +
+                    ";Door=" + (doorRule.Side ?? string.Empty) +
+                    ";DoorSource=" + (doorSource ?? string.Empty) +
+                    ";Core=" + (finalCoreMode ?? string.Empty) +
+                    ";Maintenance=" + (finalMaintenanceMode ?? string.Empty) +
+                    ";Candidate=" + (candidateMode ?? string.Empty);
+                maintenanceSpaceCheck.SolidCount =
+                    finalMaintenance != null ? finalMaintenance.Count : 0;
+
+                resultLogLocalPlacement(
+                    room,
+                    option,
+                    instance,
+                    doorRule,
+                    doorCenter,
+                    doorBoundaryPoint,
+                    doorOutwardNormal,
+                    localRight,
+                    localBottom,
+                    rotationAngle,
+                    finalCoreCenter,
+                    maintenanceRows,
+                    maintenanceSpaceCheck);
+
+                tx.Commit();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (tx != null && tx.HasStarted())
+                {
+                    tx.RollBack();
+                }
+
+                error = ex.Message;
+                if (maintenanceSpaceCheck != null &&
+                    string.Equals(
+                        maintenanceSpaceCheck.Status,
+                        "NotChecked",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    maintenanceSpaceCheck.Status = "Exceeded";
+                    maintenanceSpaceCheck.Mode =
+                        "RevitLocal/Exception=" + ex.GetType().Name;
+                }
+
+                return false;
+            }
+        }
+
+        private static void TryDeleteFailedPlacementInstance(
+            Document doc,
+            ElementId instanceId)
+        {
+            if (doc == null ||
+                instanceId == null ||
+                instanceId == ElementId.InvalidElementId ||
+                doc.GetElement(instanceId) == null)
+            {
+                return;
+            }
+
+            try
+            {
+                using (Transaction tx = new Transaction(
+                    doc,
+                    "Remove Failed AHU Placement"))
+                {
+                    tx.Start();
+                    doc.Delete(instanceId);
+                    tx.Commit();
+                }
+            }
+            catch (Exception ex)
+            {
+                DiagnosticRecorder.AppendDebug(
+                    "[AhuLocalPlacement] Failed instance cleanup skipped. ElementId=" +
+                    FormatElementId(instanceId) +
+                    ", Error=" + ex.Message);
+            }
+        }
+
+        private static bool TryResolveConfiguredAhuLocalAxes(
+            Document doc,
+            FamilyInstance root,
+            string familyKey,
+            out XYZ rightAxis,
+            out XYZ bottomAxis,
+            out string mode)
+        {
+            rightAxis = null;
+            bottomAxis = null;
+            mode = string.Empty;
+            if (doc == null || root == null || string.IsNullOrWhiteSpace(familyKey))
+            {
+                return false;
+            }
+
+            IReadOnlyList<RoomCustomFamilySubModuleDto> configured =
+                RoomCustomFamilyCatalogService.GetSubModules(familyKey);
+            if (configured == null || configured.Count < 2)
+            {
+                mode = "SubModuleCatalogMissing";
+                return false;
+            }
+
+            List<FamilyInstance> nested = new List<FamilyInstance>();
+            CollectNestedFamilyInstances(
+                doc,
+                root,
+                nested,
+                new HashSet<int>(),
+                true);
+
+            List<AhuConfiguredModuleCenter> centers =
+                new List<AhuConfiguredModuleCenter>();
+
+            foreach (RoomCustomFamilySubModuleDto row in configured
+                .Where(x => x != null && !string.IsNullOrWhiteSpace(x.Name))
+                .OrderBy(x => x.Sequence))
+            {
+                string token = NormalizePlacementNameToken(row.Name);
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    continue;
+                }
+
+                FamilyInstance matched = nested
+                    .Where(x => x != null)
+                    .Select(x => new
+                    {
+                        Instance = x,
+                        Search = NormalizePlacementNameToken(
+                            BuildElementSearchText(x))
+                    })
+                    .Where(x =>
+                        !string.IsNullOrWhiteSpace(x.Search) &&
+                        x.Search.Contains(token))
+                    .OrderBy(x => x.Search.Length)
+                    .Select(x => x.Instance)
+                    .FirstOrDefault();
+
+                XYZ center = matched != null
+                    ? GetElementBoundingBoxCenter(matched)
+                    : null;
+                if (center == null)
+                {
+                    continue;
+                }
+
+                centers.Add(new AhuConfiguredModuleCenter
+                {
+                    ModuleCode = row.ModuleCode ?? string.Empty,
+                    Name = row.Name ?? string.Empty,
+                    GridRow = row.GridRow,
+                    GridColumn = row.GridColumn,
+                    Center = center
+                });
+            }
+
+            if (centers.Count < 2)
+            {
+                // These AHU RFAs can contain non-shared nested content, so
+                // GetSubComponentIds() may expose no named S1-S6 subcomponents even
+                // though the visible family geometry is correct.  All current AHU
+                // families use the same authoring convention:
+                //   local Right  = FamilyInstance.HandOrientation
+                //   local Bottom = -FamilyInstance.FacingOrientation
+                // This fallback is deterministic and replaces the old connector/
+                // Service-Side guessing.  If shared named modules are available,
+                // the catalog-name/grid reconstruction above remains preferred.
+                XYZ hand = Flatten(root.HandOrientation);
+                XYZ facing = Flatten(root.FacingOrientation);
+                if (IsUsableDirection(hand) && IsUsableDirection(facing))
+                {
+                    rightAxis = hand.Normalize();
+                    bottomAxis = NegateXY(facing.Normalize());
+                    mode = "FamilyHandFacingFallback(matches=" +
+                           centers.Count.ToString(CultureInfo.InvariantCulture) +
+                           ", Right=Hand, Bottom=-Facing)";
+                    return IsUsableDirection(bottomAxis);
+                }
+
+                mode = "NestedModuleMatchFailed(count=" +
+                       centers.Count.ToString(CultureInfo.InvariantCulture) + ")";
+                return false;
+            }
+
+            List<IGrouping<int, AhuConfiguredModuleCenter>> columnGroups =
+                centers.GroupBy(x => x.GridColumn)
+                    .OrderBy(x => x.Key)
+                    .ToList();
+            if (columnGroups.Count >= 2)
+            {
+                XYZ leftCenter = AveragePlacementPoints(columnGroups.First()
+                    .Select(x => x.Center));
+                XYZ rightCenter = AveragePlacementPoints(columnGroups.Last()
+                    .Select(x => x.Center));
+                XYZ vector = Flatten(rightCenter - leftCenter);
+                if (IsUsableDirection(vector))
+                {
+                    rightAxis = vector.Normalize();
+                }
+            }
+
+            List<IGrouping<int, AhuConfiguredModuleCenter>> rowGroups =
+                centers.GroupBy(x => x.GridRow)
+                    .OrderBy(x => x.Key)
+                    .ToList();
+            if (rowGroups.Count >= 2)
+            {
+                XYZ topCenter = AveragePlacementPoints(rowGroups.First()
+                    .Select(x => x.Center));
+                XYZ bottomCenter = AveragePlacementPoints(rowGroups.Last()
+                    .Select(x => x.Center));
+                XYZ vector = Flatten(bottomCenter - topCenter);
+                if (IsUsableDirection(vector))
+                {
+                    bottomAxis = vector.Normalize();
+                }
+            }
+
+            if (!IsUsableDirection(rightAxis) || !IsUsableDirection(bottomAxis))
+            {
+                XYZ hand = Flatten(root.HandOrientation);
+                XYZ facing = Flatten(root.FacingOrientation);
+                if (IsUsableDirection(hand) && IsUsableDirection(facing))
+                {
+                    rightAxis = hand.Normalize();
+                    bottomAxis = NegateXY(facing.Normalize());
+                    mode = "FamilyHandFacingFallbackAfterPartialMatch(matches=" +
+                           centers.Count.ToString(CultureInfo.InvariantCulture) +
+                           ", Right=Hand, Bottom=-Facing)";
+                    return IsUsableDirection(bottomAxis);
+                }
+
+                mode = "ConfiguredAxisInsufficient(matches=" +
+                       centers.Count.ToString(CultureInfo.InvariantCulture) + ")";
+                return false;
+            }
+
+            // Remove tiny non-orthogonal noise from nested-family bounding boxes
+            // while preserving the observed Bottom sign from the catalog grid.
+            XYZ rawBottom = bottomAxis.Normalize();
+            XYZ r = rightAxis.Normalize();
+            double dot = DotXY(rawBottom, r);
+            XYZ orthogonalBottom = Flatten(rawBottom - r * dot);
+            if (!IsUsableDirection(orthogonalBottom))
+            {
+                mode = "ConfiguredAxesParallel";
+                return false;
+            }
+
+            orthogonalBottom = orthogonalBottom.Normalize();
+            if (DotXY(orthogonalBottom, rawBottom) < 0.0)
+            {
+                orthogonalBottom = NegateXY(orthogonalBottom);
+            }
+
+            rightAxis = r;
+            bottomAxis = orthogonalBottom;
+            mode = "SubModules(matches=" +
+                   centers.Count.ToString(CultureInfo.InvariantCulture) + ")";
+            return true;
+        }
+
+        private static void CollectNestedFamilyInstances(
+            Document doc,
+            FamilyInstance instance,
+            List<FamilyInstance> result,
+            HashSet<int> seen,
+            bool skipSelf)
+        {
+            if (doc == null || instance == null || result == null || seen == null)
+            {
+                return;
+            }
+
+            if (instance.Id == null || !seen.Add(instance.Id.IntegerValue))
+            {
+                return;
+            }
+
+            if (!skipSelf)
+            {
+                result.Add(instance);
+            }
+
+            ICollection<ElementId> subIds = null;
+            try
+            {
+                subIds = instance.GetSubComponentIds();
+            }
+            catch
+            {
+                subIds = null;
+            }
+
+            if (subIds == null)
+            {
+                return;
+            }
+
+            foreach (ElementId id in subIds)
+            {
+                FamilyInstance child =
+                    id != null && id != ElementId.InvalidElementId
+                        ? doc.GetElement(id) as FamilyInstance
+                        : null;
+                if (child != null)
+                {
+                    CollectNestedFamilyInstances(
+                        doc,
+                        child,
+                        result,
+                        seen,
+                        false);
+                }
+            }
+        }
+
+        private static string NormalizePlacementNameToken(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return string.Empty;
+            }
+
+            return new string(
+                value.ToLowerInvariant()
+                    .Where(char.IsLetterOrDigit)
+                    .ToArray());
+        }
+
+        private static XYZ AveragePlacementPoints(IEnumerable<XYZ> points)
+        {
+            List<XYZ> rows = (points ?? Enumerable.Empty<XYZ>())
+                .Where(x => x != null)
+                .ToList();
+            if (rows.Count == 0)
+            {
+                return null;
+            }
+
+            return new XYZ(
+                rows.Average(x => x.X),
+                rows.Average(x => x.Y),
+                rows.Average(x => x.Z));
+        }
+
+        private static XYZ ResolveConfiguredAhuSideDirection(
+            string side,
+            XYZ rightAxis,
+            XYZ bottomAxis)
+        {
+            if (!IsUsableDirection(rightAxis) ||
+                !IsUsableDirection(bottomAxis))
+            {
+                return null;
+            }
+
+            string value = (side ?? string.Empty).Trim();
+            if (string.Equals(value, "Right", StringComparison.OrdinalIgnoreCase))
+            {
+                return rightAxis.Normalize();
+            }
+
+            if (string.Equals(value, "Left", StringComparison.OrdinalIgnoreCase))
+            {
+                return NegateXY(rightAxis.Normalize());
+            }
+
+            if (string.Equals(value, "Bottom", StringComparison.OrdinalIgnoreCase))
+            {
+                return bottomAxis.Normalize();
+            }
+
+            if (string.Equals(value, "Top", StringComparison.OrdinalIgnoreCase))
+            {
+                return NegateXY(bottomAxis.Normalize());
+            }
+
+            return null;
+        }
+
+        private static bool TryResolveDoorBoundaryFrame(
+            RoomSemanticRecord room,
+            XYZ roomCenter,
+            XYZ doorCenter,
+            out XYZ boundaryPoint,
+            out XYZ outwardNormal,
+            out XYZ tangent)
+        {
+            boundaryPoint = null;
+            outwardNormal = null;
+            tangent = null;
+            if (room == null || roomCenter == null || doorCenter == null ||
+                room.LoopPoints == null || room.LoopPoints.Count < 2)
+            {
+                return false;
+            }
+
+            List<XYZ> points = room.LoopPoints
+                .Where(x => x != null)
+                .ToList();
+            if (points.Count < 2)
+            {
+                return false;
+            }
+
+            double bestDistance = double.MaxValue;
+            XYZ bestA = null;
+            XYZ bestB = null;
+            XYZ bestPoint = null;
+
+            for (int i = 0; i < points.Count; i++)
+            {
+                XYZ a = points[i];
+                XYZ b = points[(i + 1) % points.Count];
+                XYZ closest = ClosestPointOnSegmentXY(
+                    doorCenter,
+                    a,
+                    b);
+                if (closest == null)
+                {
+                    continue;
+                }
+
+                double distance = HorizontalDistance(
+                    doorCenter,
+                    closest);
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    bestA = a;
+                    bestB = b;
+                    bestPoint = closest;
+                }
+            }
+
+            XYZ segment = bestA != null && bestB != null
+                ? Flatten(bestB - bestA)
+                : null;
+            if (!IsUsableDirection(segment) || bestPoint == null)
+            {
+                return false;
+            }
+
+            tangent = segment.Normalize();
+            XYZ n1 = new XYZ(-tangent.Y, tangent.X, 0.0);
+            XYZ n2 = NegateXY(n1);
+            XYZ centerToBoundary = Flatten(bestPoint - roomCenter);
+            if (!IsUsableDirection(centerToBoundary))
+            {
+                centerToBoundary = Flatten(doorCenter - roomCenter);
+            }
+
+            if (!IsUsableDirection(centerToBoundary))
+            {
+                return false;
+            }
+
+            outwardNormal =
+                DotXY(n1, centerToBoundary) >= DotXY(n2, centerToBoundary)
+                    ? n1.Normalize()
+                    : n2.Normalize();
+            boundaryPoint = bestPoint;
+            return IsUsableDirection(outwardNormal);
+        }
+
+        private static XYZ ClosestPointOnSegmentXY(
+            XYZ point,
+            XYZ a,
+            XYZ b)
+        {
+            if (point == null || a == null || b == null)
+            {
+                return null;
+            }
+
+            double dx = b.X - a.X;
+            double dy = b.Y - a.Y;
+            double lengthSquared = dx * dx + dy * dy;
+            if (lengthSquared < 1e-12)
+            {
+                return new XYZ(a.X, a.Y, point.Z);
+            }
+
+            double t =
+                ((point.X - a.X) * dx +
+                 (point.Y - a.Y) * dy) /
+                lengthSquared;
+            t = Math.Max(0.0, Math.Min(1.0, t));
+            return new XYZ(
+                a.X + t * dx,
+                a.Y + t * dy,
+                point.Z);
+        }
+
+        private static List<XYZ> CollectEquipmentCorePlanPoints(
+            Document doc,
+            FamilyInstance instance,
+            out string mode)
+        {
+            mode = string.Empty;
+            List<XYZ> points = new List<XYZ>();
+            if (doc == null || instance == null)
+            {
+                mode = "InvalidContext";
+                return points;
+            }
+
+            Options options = new Options
+            {
+                ComputeReferences = false,
+                IncludeNonVisibleObjects = false,
+                DetailLevel = ViewDetailLevel.Fine
+            };
+
+            GeometryElement geometry = null;
+            try
+            {
+                geometry = instance.get_Geometry(options);
+            }
+            catch
+            {
+                geometry = null;
+            }
+
+            if (geometry == null)
+            {
+                mode = "NoGeometry";
+                return points;
+            }
+
+            int included;
+            int maintenanceSkipped;
+            int transparentSkipped;
+            int tinySkipped;
+            CollectEquipmentCorePlanPoints(
+                doc,
+                geometry,
+                points,
+                0,
+                out included,
+                out maintenanceSkipped,
+                out transparentSkipped,
+                out tinySkipped);
+
+            mode =
+                "PhysicalCore(included=" +
+                included.ToString(CultureInfo.InvariantCulture) +
+                ", maintenanceSkipped=" +
+                maintenanceSkipped.ToString(CultureInfo.InvariantCulture) +
+                ", transparentSkipped=" +
+                transparentSkipped.ToString(CultureInfo.InvariantCulture) +
+                ", tinySkipped=" +
+                tinySkipped.ToString(CultureInfo.InvariantCulture) + ")";
+            return points;
+        }
+
+        private static void CollectEquipmentCorePlanPoints(
+            Document doc,
+            GeometryElement geometry,
+            List<XYZ> points,
+            int depth,
+            out int included,
+            out int maintenanceSkipped,
+            out int transparentSkipped,
+            out int tinySkipped)
+        {
+            included = 0;
+            maintenanceSkipped = 0;
+            transparentSkipped = 0;
+            tinySkipped = 0;
+
+            if (doc == null || geometry == null || points == null || depth > 8)
+            {
+                return;
+            }
+
+            foreach (GeometryObject geometryObject in geometry)
+            {
+                if (geometryObject == null)
+                {
+                    continue;
+                }
+
+                Solid solid = geometryObject as Solid;
+                if (solid != null)
+                {
+                    if (IsTinySolid(solid))
+                    {
+                        tinySkipped++;
+                        continue;
+                    }
+
+                    MaintenanceSpaceSolidKind maintenanceKind;
+                    string maintenanceReason;
+                    if (IsMaintenanceSpaceSolid(
+                            doc,
+                            geometryObject,
+                            solid,
+                            out maintenanceKind,
+                            out maintenanceReason))
+                    {
+                        maintenanceSkipped++;
+                        continue;
+                    }
+
+                    if (IsMostlyTransparentSolid(doc, solid, 70))
+                    {
+                        transparentSkipped++;
+                        continue;
+                    }
+
+                    List<XYZ> solidPoints = ExtractSolidXyPoints(solid);
+                    if (solidPoints.Count == 0)
+                    {
+                        BoundingBoxXYZ box = null;
+                        try
+                        {
+                            box = solid.GetBoundingBox();
+                        }
+                        catch
+                        {
+                            box = null;
+                        }
+
+                        solidPoints = GetBoundingBoxXyCorners(box);
+                    }
+
+                    foreach (XYZ point in solidPoints)
+                    {
+                        AddUniquePointXY(points, point);
+                    }
+                    included++;
+                    continue;
+                }
+
+                GeometryInstance nestedInstance =
+                    geometryObject as GeometryInstance;
+                if (nestedInstance == null)
+                {
+                    continue;
+                }
+
+                GeometryElement nested = null;
+                try
+                {
+                    nested = nestedInstance.GetInstanceGeometry();
+                }
+                catch
+                {
+                    nested = null;
+                }
+
+                if (nested == null)
+                {
+                    continue;
+                }
+
+                int childIncluded;
+                int childMaintenance;
+                int childTransparent;
+                int childTiny;
+                CollectEquipmentCorePlanPoints(
+                    doc,
+                    nested,
+                    points,
+                    depth + 1,
+                    out childIncluded,
+                    out childMaintenance,
+                    out childTransparent,
+                    out childTiny);
+                included += childIncluded;
+                maintenanceSkipped += childMaintenance;
+                transparentSkipped += childTransparent;
+                tinySkipped += childTiny;
+            }
+        }
+
+        private static bool TryAlignConfiguredWallSideGaps(
+            Document doc,
+            RoomSemanticRecord room,
+            FamilyInstance instance,
+            IReadOnlyList<RoomCustomFamilyMaintenanceSpaceDto> maintenanceRows,
+            XYZ localRight,
+            XYZ localBottom,
+            out string error)
+        {
+            error = string.Empty;
+            if (doc == null || room == null || instance == null)
+            {
+                error = "Invalid wall-side placement context.";
+                return false;
+            }
+
+            List<RoomCustomFamilyMaintenanceSpaceDto> wallRules =
+                (maintenanceRows ?? Array.Empty<RoomCustomFamilyMaintenanceSpaceDto>())
+                    .Where(x =>
+                        x != null &&
+                        x.IsWallSide &&
+                        x.DimensionMm >= 0 &&
+                        !string.IsNullOrWhiteSpace(x.Side))
+                    .OrderBy(x => x.Sequence)
+                    .ToList();
+
+            foreach (RoomCustomFamilyMaintenanceSpaceDto rule in wallRules)
+            {
+                XYZ sideDirection = ResolveConfiguredAhuSideDirection(
+                    rule.Side,
+                    localRight,
+                    localBottom);
+                if (!IsUsableDirection(sideDirection))
+                {
+                    error = "Invalid Wall Side configuration: " +
+                            (rule.Side ?? string.Empty) + ".";
+                    return false;
+                }
+
+                string centerMode;
+                XYZ coreCenter = ResolveEquipmentCoreCenterForFinalPlacement(
+                                     doc,
+                                     instance,
+                                     null,
+                                     out centerMode)
+                                 ?? GetElementBoundingBoxCenter(instance);
+                List<XYZ> corePoints = CollectEquipmentCorePlanPoints(
+                    doc,
+                    instance,
+                    out string coreMode);
+                List<XYZ> coreHull = ComputeConvexHullXY(corePoints);
+                if (coreCenter == null || coreHull == null || coreHull.Count < 3)
+                {
+                    error = "AHU body footprint could not be resolved while applying Wall Side.";
+                    return false;
+                }
+
+                List<XYZ> validCoreHull = coreHull
+                    .Where(x => x != null && IsUsablePlanPoint(x))
+                    .ToList();
+                if (validCoreHull.Count < 3)
+                {
+                    error = "AHU body footprint contains no usable plan geometry while applying Wall Side.";
+                    return false;
+                }
+
+                DiagnosticRecorder.AppendDebug(
+                    "[AhuLocalPlacement] WallSideResolve. Side=" +
+                    (rule.Side ?? string.Empty) +
+                    ", CoreMode=" + (coreMode ?? string.Empty) +
+                    ", CoreCenter=(" + FormatPoint(coreCenter) + ")" +
+                    ", CoreHullCount=" + validCoreHull.Count.ToString(CultureInfo.InvariantCulture) +
+                    ", CoreXmm=[" +
+                    FormatMm(validCoreHull.Min(x => x.X)) + "," +
+                    FormatMm(validCoreHull.Max(x => x.X)) + "]" +
+                    ", CoreYmm=[" +
+                    FormatMm(validCoreHull.Min(x => x.Y)) + "," +
+                    FormatMm(validCoreHull.Max(x => x.Y)) + "]" +
+                    ", Direction=(" + FormatVector(sideDirection) + ")");
+
+                double currentGap;
+                if (!TryResolveCoreGapToBoundary(
+                        room,
+                        coreCenter,
+                        validCoreHull,
+                        sideDirection,
+                        out currentGap))
+                {
+                    error = "No room boundary was found in the configured Wall Side direction " +
+                            (rule.Side ?? string.Empty) + ".";
+                    return false;
+                }
+
+                double desiredGap = UnitUtils.ConvertToInternalUnits(
+                    Math.Max(0.0, rule.DimensionMm),
+                    UnitTypeId.Millimeters);
+                double moveAmount = currentGap - desiredGap;
+                if (!IsReasonablePlacementSignedDistance(moveAmount))
+                {
+                    error = "Resolved Wall Side move is outside the valid placement range for " +
+                            (rule.Side ?? string.Empty) + ".";
+                    return false;
+                }
+
+                if (Math.Abs(moveAmount) >
+                    UnitUtils.ConvertToInternalUnits(
+                        1.0,
+                        UnitTypeId.Millimeters))
+                {
+                    ElementTransformUtils.MoveElement(
+                        doc,
+                        instance.Id,
+                        sideDirection.Normalize() * moveAmount);
+                    doc.Regenerate();
+                }
+
+                DiagnosticRecorder.AppendDebug(
+                    "[AhuLocalPlacement] WallSideAligned. Side=" +
+                    (rule.Side ?? string.Empty) +
+                    ", RequestedMm=" +
+                    rule.DimensionMm.ToString(
+                        CultureInfo.InvariantCulture) +
+                    ", BeforeMm=" +
+                    FormatMm(currentGap) +
+                    ", MoveMm=" +
+                    FormatMm(moveAmount));
+            }
+
+            return true;
+        }
+
+        private static bool TryResolveCoreGapToBoundary(
+            RoomSemanticRecord room,
+            XYZ coreCenter,
+            IList<XYZ> coreHull,
+            XYZ sideDirection,
+            out double gap)
+        {
+            gap = 0.0;
+            if (room == null || coreCenter == null ||
+                coreHull == null || coreHull.Count < 3 ||
+                !IsUsableDirection(sideDirection) ||
+                !IsUsablePlanPoint(coreCenter))
+            {
+                return false;
+            }
+
+            // Revit geometry can occasionally expose sentinel-like coordinates
+            // (for example ~1E30) from helper/reference solids.  Those points must
+            // never participate in the AHU body extent or wall-gap calculation.
+            List<XYZ> validHull = coreHull
+                .Where(x => x != null && IsUsablePlanPoint(x))
+                .ToList();
+            if (validHull.Count < 3)
+            {
+                return false;
+            }
+
+            XYZ direction = sideDirection.Normalize();
+            double boundaryDistance;
+            if (!TryRayDistanceToRoomBoundary(
+                    room,
+                    coreCenter,
+                    direction,
+                    out boundaryDistance) ||
+                !IsReasonablePlacementDistance(boundaryDistance))
+            {
+                return false;
+            }
+
+            List<double> extents = validHull
+                .Select(x => DotXY(
+                    Flatten(x - coreCenter),
+                    direction))
+                .Where(IsReasonablePlacementSignedDistance)
+                .ToList();
+            if (extents.Count < 3)
+            {
+                return false;
+            }
+
+            double bodyExtent = extents.Max();
+            if (!IsReasonablePlacementSignedDistance(bodyExtent))
+            {
+                return false;
+            }
+
+            gap = boundaryDistance - bodyExtent;
+            return IsReasonablePlacementSignedDistance(gap);
+        }
+
+        private static bool TryRayDistanceToRoomBoundary(
+            RoomSemanticRecord room,
+            XYZ origin,
+            XYZ direction,
+            out double distance)
+        {
+            distance = double.MaxValue;
+            if (room == null || origin == null ||
+                !IsUsableDirection(direction) ||
+                room.LoopPoints == null ||
+                room.LoopPoints.Count < 2)
+            {
+                return false;
+            }
+
+            XYZ d = direction.Normalize();
+            List<XYZ> points = room.LoopPoints
+                .Where(x => x != null)
+                .ToList();
+            if (points.Count < 2)
+            {
+                return false;
+            }
+
+            bool found = false;
+            for (int i = 0; i < points.Count; i++)
+            {
+                XYZ a = points[i];
+                XYZ b = points[(i + 1) % points.Count];
+                double rayDistance;
+                if (!TryIntersectRayWithSegmentXY(
+                        origin,
+                        d,
+                        a,
+                        b,
+                        out rayDistance))
+                {
+                    continue;
+                }
+
+                if (rayDistance >= -1e-8 &&
+                    rayDistance < distance)
+                {
+                    distance = Math.Max(0.0, rayDistance);
+                    found = true;
+                }
+            }
+
+            return found && distance != double.MaxValue;
+        }
+
+        private static bool TryIntersectRayWithSegmentXY(
+            XYZ origin,
+            XYZ direction,
+            XYZ a,
+            XYZ b,
+            out double rayDistance)
+        {
+            rayDistance = 0.0;
+            if (origin == null || direction == null ||
+                a == null || b == null)
+            {
+                return false;
+            }
+
+            double rx = direction.X;
+            double ry = direction.Y;
+            double sx = b.X - a.X;
+            double sy = b.Y - a.Y;
+            double denominator = rx * sy - ry * sx;
+            if (Math.Abs(denominator) < 1e-10)
+            {
+                return false;
+            }
+
+            double qpx = a.X - origin.X;
+            double qpy = a.Y - origin.Y;
+            double t = (qpx * sy - qpy * sx) / denominator;
+            double u = (qpx * ry - qpy * rx) / denominator;
+            if (t < -1e-8 || u < -1e-8 || u > 1.0 + 1e-8)
+            {
+                return false;
+            }
+
+            rayDistance = t;
+            return true;
+        }
+
+        private static List<MaintenanceSpaceFootprint> BuildCatalogMaintenanceFootprints(
+            XYZ coreCenter,
+            IList<XYZ> coreHull,
+            IReadOnlyList<RoomCustomFamilyMaintenanceSpaceDto> maintenanceRows,
+            XYZ localRight,
+            XYZ localBottom)
+        {
+            List<MaintenanceSpaceFootprint> result =
+                new List<MaintenanceSpaceFootprint>();
+            if (coreCenter == null || coreHull == null ||
+                coreHull.Count < 3 ||
+                !IsUsableDirection(localRight) ||
+                !IsUsableDirection(localBottom))
+            {
+                return result;
+            }
+
+            XYZ right = localRight.Normalize();
+            XYZ bottom = localBottom.Normalize();
+
+            List<double> rightProjection = coreHull
+                .Where(x => x != null)
+                .Select(x => DotXY(
+                    Flatten(x - coreCenter),
+                    right))
+                .ToList();
+            List<double> bottomProjection = coreHull
+                .Where(x => x != null)
+                .Select(x => DotXY(
+                    Flatten(x - coreCenter),
+                    bottom))
+                .ToList();
+            if (rightProjection.Count == 0 ||
+                bottomProjection.Count == 0)
+            {
+                return result;
+            }
+
+            double minR = rightProjection.Min();
+            double maxR = rightProjection.Max();
+            double minB = bottomProjection.Min();
+            double maxB = bottomProjection.Max();
+
+            foreach (RoomCustomFamilyMaintenanceSpaceDto row in
+                (maintenanceRows ??
+                 Array.Empty<RoomCustomFamilyMaintenanceSpaceDto>())
+                    .Where(x =>
+                        x != null &&
+                        x.DimensionMm > 0 &&
+                        !string.IsNullOrWhiteSpace(x.Side)))
+            {
+                double clearance = UnitUtils.ConvertToInternalUnits(
+                    row.DimensionMm,
+                    UnitTypeId.Millimeters);
+
+                double r0 = minR;
+                double r1 = maxR;
+                double b0 = minB;
+                double b1 = maxB;
+
+                if (string.Equals(
+                        row.Side,
+                        "Top",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    b0 = minB - clearance;
+                    b1 = minB;
+                }
+                else if (string.Equals(
+                             row.Side,
+                             "Bottom",
+                             StringComparison.OrdinalIgnoreCase))
+                {
+                    b0 = maxB;
+                    b1 = maxB + clearance;
+                }
+                else if (string.Equals(
+                             row.Side,
+                             "Left",
+                             StringComparison.OrdinalIgnoreCase))
+                {
+                    r0 = minR - clearance;
+                    r1 = minR;
+                }
+                else if (string.Equals(
+                             row.Side,
+                             "Right",
+                             StringComparison.OrdinalIgnoreCase))
+                {
+                    r0 = maxR;
+                    r1 = maxR + clearance;
+                }
+                else
+                {
+                    continue;
+                }
+
+                List<XYZ> hull = new List<XYZ>
+                {
+                    coreCenter + right * r0 + bottom * b0,
+                    coreCenter + right * r1 + bottom * b0,
+                    coreCenter + right * r1 + bottom * b1,
+                    coreCenter + right * r0 + bottom * b1
+                };
+
+                result.Add(new MaintenanceSpaceFootprint
+                {
+                    Source = "Catalog:" +
+                             (row.MaintenanceCode ?? row.Side ?? string.Empty),
+                    HullPoints = hull
+                });
+            }
+
+            return result;
+        }
+
+        private static bool TryFindFeasibleLocalPlacementTranslation(
+            RoomSemanticRecord room,
+            XYZ coreCenter,
+            IList<XYZ> coreHull,
+            IList<MaintenanceSpaceFootprint> maintenanceFootprints,
+            IReadOnlyList<RoomCustomFamilyMaintenanceSpaceDto> maintenanceRows,
+            XYZ localRight,
+            XYZ localBottom,
+            out XYZ translation,
+            out string mode)
+        {
+            translation = XYZ.Zero;
+            mode = string.Empty;
+            if (room == null || coreCenter == null ||
+                coreHull == null || coreHull.Count < 3)
+            {
+                mode = "InvalidContext";
+                return false;
+            }
+
+            List<RoomCustomFamilyMaintenanceSpaceDto> wallRules =
+                (maintenanceRows ??
+                 Array.Empty<RoomCustomFamilyMaintenanceSpaceDto>())
+                    .Where(x =>
+                        x != null &&
+                        x.IsWallSide &&
+                        !string.IsNullOrWhiteSpace(x.Side))
+                    .ToList();
+
+            bool rightAxisFixed =
+                wallRules.Any(x =>
+                    string.Equals(
+                        x.Side,
+                        "Left",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        x.Side,
+                        "Right",
+                        StringComparison.OrdinalIgnoreCase));
+
+            bool bottomAxisFixed =
+                wallRules.Any(x =>
+                    string.Equals(
+                        x.Side,
+                        "Top",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        x.Side,
+                        "Bottom",
+                        StringComparison.OrdinalIgnoreCase));
+
+            int wallSideCount = wallRules
+                .Select(x => (x.Side ?? string.Empty).Trim())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+
+            // Placement modes are intentionally narrow so the already-proven
+            // single-wall behavior is not changed:
+            //   0 Wall Side  -> keep the AHU physical-core center at Room Center.
+            //                   Do not drift/search away from the center.
+            //   1 Wall Side  -> keep the existing exact wall-gap alignment and
+            //                   search only along the remaining free local axis.
+            //   2 Wall Sides -> adjacent sides fix both local axes; the current
+            //                   aligned position is deterministic, so do not search.
+            // Family Library configuration is expected to use adjacent pairs only.
+            if (wallSideCount == 0)
+            {
+                string centerFitReason;
+                if (!IsLocalPlacementGeometryInsideRoom(
+                        room,
+                        coreHull,
+                        maintenanceFootprints,
+                        XYZ.Zero,
+                        out centerFitReason))
+                {
+                    mode = "CenterOnlyExceeded";
+                    DiagnosticRecorder.AppendDebug(
+                        "[AhuLocalPlacement] PlacementMode=CenterOnly, Result=Exceeded, Reason=" +
+                        (centerFitReason ?? string.Empty));
+                    return false;
+                }
+
+                translation = XYZ.Zero;
+                mode = "CenterOnly";
+                DiagnosticRecorder.AppendDebug(
+                    "[AhuLocalPlacement] PlacementMode=CenterOnly, Result=Valid");
+                return true;
+            }
+
+            List<XYZ> candidates = BuildLocalPlacementCandidateTranslations(
+                room,
+                rightAxisFixed,
+                bottomAxisFixed,
+                localRight,
+                localBottom);
+
+            int tested = 0;
+            foreach (XYZ candidate in candidates)
+            {
+                tested++;
+                string fitReason;
+                if (!IsLocalPlacementGeometryInsideRoom(
+                        room,
+                        coreHull,
+                        maintenanceFootprints,
+                        candidate,
+                        out fitReason))
+                {
+                    continue;
+                }
+
+                if (!ValidateConfiguredWallSideGaps(
+                        room,
+                        coreCenter + candidate,
+                        TranslatePlacementPoints(coreHull, candidate),
+                        maintenanceRows,
+                        localRight,
+                        localBottom,
+                        35.0,
+                        out string wallReason))
+                {
+                    continue;
+                }
+
+                translation = candidate;
+                mode =
+                    "Search(wallSides=" +
+                    wallSideCount.ToString(CultureInfo.InvariantCulture) +
+                    ", tested=" +
+                    tested.ToString(CultureInfo.InvariantCulture) +
+                    ", rightFixed=" + rightAxisFixed +
+                    ", bottomFixed=" + bottomAxisFixed +
+                    ", deltaMm=[" +
+                    FormatMm(candidate.X) + "," +
+                    FormatMm(candidate.Y) + "])";
+                return true;
+            }
+
+            mode =
+                "SearchFailed(wallSides=" +
+                wallSideCount.ToString(CultureInfo.InvariantCulture) +
+                ", tested=" +
+                tested.ToString(CultureInfo.InvariantCulture) +
+                ", rightFixed=" + rightAxisFixed +
+                ", bottomFixed=" + bottomAxisFixed + ")";
+            return false;
+        }
+
+        private static List<XYZ> BuildLocalPlacementCandidateTranslations(
+            RoomSemanticRecord room,
+            bool rightAxisFixed,
+            bool bottomAxisFixed,
+            XYZ localRight,
+            XYZ localBottom)
+        {
+            List<XYZ> result = new List<XYZ>();
+            result.Add(XYZ.Zero);
+
+            XYZ right = IsUsableDirection(localRight)
+                ? localRight.Normalize()
+                : XYZ.BasisX;
+            XYZ bottom = IsUsableDirection(localBottom)
+                ? localBottom.Normalize()
+                : XYZ.BasisY;
+
+            double spanMm = 6000.0;
+            if (room != null && room.BBox != null &&
+                room.BBox.Min != null && room.BBox.Max != null)
+            {
+                spanMm = Math.Max(
+                    Math.Abs(room.BBox.Max.X - room.BBox.Min.X),
+                    Math.Abs(room.BBox.Max.Y - room.BBox.Min.Y)) *
+                    304.8;
+                spanMm = Math.Max(1000.0, spanMm);
+            }
+
+            if (rightAxisFixed && bottomAxisFixed)
+            {
+                return result;
+            }
+
+            if (rightAxisFixed ^ bottomAxisFixed)
+            {
+                XYZ freeAxis = rightAxisFixed ? bottom : right;
+                double stepFt = UnitUtils.ConvertToInternalUnits(
+                    100.0,
+                    UnitTypeId.Millimeters);
+                int maxSteps = Math.Min(
+                    100,
+                    Math.Max(
+                        1,
+                        (int)Math.Ceiling(spanMm / 100.0)));
+
+                for (int i = 1; i <= maxSteps; i++)
+                {
+                    result.Add(freeAxis * (stepFt * i));
+                    result.Add(freeAxis * (-stepFt * i));
+                }
+
+                return result;
+            }
+
+            // Safety fallback only.  Normal 0-Wall-Side placement is handled
+            // above as CenterOnly and never reaches this branch.  Keep the legacy
+            // grid search here so callers outside the normal AHU placement flow are
+            // not silently broken if they invoke this helper directly.
+            double gridStepFt = UnitUtils.ConvertToInternalUnits(
+                250.0,
+                UnitTypeId.Millimeters);
+            int maxRing = Math.Min(
+                40,
+                Math.Max(
+                    1,
+                    (int)Math.Ceiling(spanMm / 250.0)));
+
+            for (int ring = 1; ring <= maxRing; ring++)
+            {
+                for (int ix = -ring; ix <= ring; ix++)
+                {
+                    AddUniquePlacementTranslation(
+                        result,
+                        right * (gridStepFt * ix) +
+                        bottom * (gridStepFt * ring));
+                    AddUniquePlacementTranslation(
+                        result,
+                        right * (gridStepFt * ix) -
+                        bottom * (gridStepFt * ring));
+                }
+
+                for (int iy = -ring + 1; iy <= ring - 1; iy++)
+                {
+                    AddUniquePlacementTranslation(
+                        result,
+                        right * (gridStepFt * ring) +
+                        bottom * (gridStepFt * iy));
+                    AddUniquePlacementTranslation(
+                        result,
+                        right * (-gridStepFt * ring) +
+                        bottom * (gridStepFt * iy));
+                }
+            }
+
+            return result;
+        }
+
+        private static void AddUniquePlacementTranslation(
+            List<XYZ> values,
+            XYZ candidate)
+        {
+            if (values == null || candidate == null)
+            {
+                return;
+            }
+
+            double tolerance = UnitUtils.ConvertToInternalUnits(
+                1.0,
+                UnitTypeId.Millimeters);
+            if (values.Any(x =>
+                x != null &&
+                HorizontalDistance(x, candidate) <= tolerance))
+            {
+                return;
+            }
+
+            values.Add(candidate);
+        }
+
+        private static bool IsLocalPlacementGeometryInsideRoom(
+            RoomSemanticRecord room,
+            IList<XYZ> coreHull,
+            IList<MaintenanceSpaceFootprint> maintenanceFootprints,
+            XYZ translation,
+            out string reason)
+        {
+            reason = string.Empty;
+            if (room == null || coreHull == null || coreHull.Count < 3)
+            {
+                reason = "AHU body footprint is unavailable.";
+                return false;
+            }
+
+            double tolerance = UnitUtils.ConvertToInternalUnits(
+                20.0,
+                UnitTypeId.Millimeters);
+            XYZ delta = translation ?? XYZ.Zero;
+
+            List<XYZ> coreSamples = BuildFootprintSamplePoints(
+                TranslatePlacementPoints(coreHull, delta));
+            foreach (XYZ sample in coreSamples)
+            {
+                if (!IsPointInsideRoomWithTolerance(
+                        room,
+                        sample,
+                        tolerance))
+                {
+                    reason = "AHU body exceeds the selected room boundary.";
+                    return false;
+                }
+            }
+
+            foreach (MaintenanceSpaceFootprint footprint in
+                maintenanceFootprints ??
+                new List<MaintenanceSpaceFootprint>())
+            {
+                if (footprint == null ||
+                    footprint.HullPoints == null ||
+                    footprint.HullPoints.Count < 3)
+                {
+                    continue;
+                }
+
+                List<XYZ> samples = BuildFootprintSamplePoints(
+                    TranslatePlacementPoints(
+                        footprint.HullPoints,
+                        delta));
+                foreach (XYZ sample in samples)
+                {
+                    if (!IsPointInsideRoomWithTolerance(
+                            room,
+                            sample,
+                            tolerance))
+                    {
+                        reason =
+                            "Maintenance Space exceeds the selected room boundary.";
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsPointInsideRoomWithTolerance(
+            RoomSemanticRecord room,
+            XYZ point,
+            double tolerance)
+        {
+            if (room == null || point == null)
+            {
+                return false;
+            }
+
+            if (IsPointInsideLoop(room.LoopPoints, point))
+            {
+                return true;
+            }
+
+            double boundaryDistance =
+                DistanceToRoomBoundary(room, point);
+            return boundaryDistance != double.MaxValue &&
+                   boundaryDistance <= Math.Max(0.0, tolerance);
+        }
+
+        private static List<XYZ> TranslatePlacementPoints(
+            IEnumerable<XYZ> points,
+            XYZ translation)
+        {
+            XYZ delta = translation ?? XYZ.Zero;
+            return (points ?? Enumerable.Empty<XYZ>())
+                .Where(x => x != null && IsUsablePlanPoint(x))
+                .Select(x => x + delta)
+                .Where(IsUsablePlanPoint)
+                .ToList();
+        }
+
+        private static bool ValidateConfiguredWallSideGaps(
+            RoomSemanticRecord room,
+            XYZ coreCenter,
+            IList<XYZ> coreHull,
+            IReadOnlyList<RoomCustomFamilyMaintenanceSpaceDto> maintenanceRows,
+            XYZ localRight,
+            XYZ localBottom,
+            double toleranceMm,
+            out string reason)
+        {
+            reason = string.Empty;
+            if (room == null || coreCenter == null ||
+                coreHull == null || coreHull.Count < 3)
+            {
+                reason = "AHU body footprint is unavailable.";
+                return false;
+            }
+
+            foreach (RoomCustomFamilyMaintenanceSpaceDto rule in
+                (maintenanceRows ??
+                 Array.Empty<RoomCustomFamilyMaintenanceSpaceDto>())
+                    .Where(x =>
+                        x != null &&
+                        x.IsWallSide &&
+                        !string.IsNullOrWhiteSpace(x.Side)))
+            {
+                XYZ direction = ResolveConfiguredAhuSideDirection(
+                    rule.Side,
+                    localRight,
+                    localBottom);
+                double gap;
+                if (!IsUsableDirection(direction) ||
+                    !TryResolveCoreGapToBoundary(
+                        room,
+                        coreCenter,
+                        coreHull,
+                        direction,
+                        out gap))
+                {
+                    reason =
+                        "Configured Wall Side '" +
+                        (rule.Side ?? string.Empty) +
+                        "' cannot resolve a room boundary.";
+                    return false;
+                }
+
+                double actualMm = gap * 304.8;
+                double requestedMm = Math.Max(
+                    0.0,
+                    rule.DimensionMm);
+                if (Math.Abs(actualMm - requestedMm) >
+                    Math.Max(1.0, toleranceMm))
+                {
+                    reason =
+                        "Configured Wall Side '" +
+                        (rule.Side ?? string.Empty) +
+                        "' requires " +
+                        requestedMm.ToString(
+                            "0",
+                            CultureInfo.InvariantCulture) +
+                        " mm from the AHU body to the wall, but the resolved gap is " +
+                        actualMm.ToString(
+                            "0",
+                            CultureInfo.InvariantCulture) +
+                        " mm.";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static void resultLogLocalPlacement(
+            RoomSemanticRecord room,
+            RoomCustomFamilyOption option,
+            FamilyInstance instance,
+            RoomCustomFamilyMaintenanceSpaceDto doorRule,
+            XYZ doorCenter,
+            XYZ doorBoundaryPoint,
+            XYZ doorNormal,
+            XYZ localRight,
+            XYZ localBottom,
+            double rotationAngle,
+            XYZ finalCoreCenter,
+            IReadOnlyList<RoomCustomFamilyMaintenanceSpaceDto> maintenanceRows,
+            MaintenanceSpaceFitResult fit)
+        {
+            DiagnosticRecorder.AppendDebug(
+                "[AhuLocalPlacement] Success. RoomKey=" +
+                (room != null ? room.Key ?? string.Empty : string.Empty) +
+                ", FamilyKey=" +
+                (option != null ? option.Key ?? string.Empty : string.Empty) +
+                ", ElementId=" +
+                FormatElementId(instance != null
+                    ? instance.Id
+                    : ElementId.InvalidElementId) +
+                ", DoorSide=" +
+                (doorRule != null ? doorRule.Side ?? string.Empty : string.Empty) +
+                ", DoorCenter=(" + FormatPoint(doorCenter) + ")" +
+                ", DoorBoundary=(" + FormatPoint(doorBoundaryPoint) + ")" +
+                ", DoorNormal=(" + FormatVector(doorNormal) + ")" +
+                ", LocalRight=(" + FormatVector(localRight) + ")" +
+                ", LocalBottom=(" + FormatVector(localBottom) + ")" +
+                ", RotationDeg=" +
+                (rotationAngle * 180.0 / Math.PI).ToString(
+                    "F3",
+                    CultureInfo.InvariantCulture) +
+                ", FinalCoreCenter=(" +
+                FormatPoint(finalCoreCenter) + ")" +
+                ", WallRules=" +
+                string.Join(
+                    "|",
+                    (maintenanceRows ??
+                     Array.Empty<RoomCustomFamilyMaintenanceSpaceDto>())
+                        .Where(x => x != null && x.IsWallSide)
+                        .Select(x =>
+                            (x.Side ?? string.Empty) +
+                            ":" +
+                            x.DimensionMm.ToString(
+                                CultureInfo.InvariantCulture) +
+                            "mm")) +
+                ", Fit=" +
+                FormatMaintenanceSpaceFitResult(fit));
+        }
+
         private static bool TryOrientPlacedEquipmentTowardRoomDoor(
             Document doc,
             RoomSemanticRecord room,
@@ -1627,16 +3787,17 @@ namespace CadToRevit.Services.Rooms
         private static List<XYZ> GetBoundingBoxXyCorners(BoundingBoxXYZ box)
         {
             List<XYZ> corners = new List<XYZ>();
-            if (box == null || box.Min == null || box.Max == null)
+            if (box == null || box.Min == null || box.Max == null ||
+                !IsUsablePlanPoint(box.Min) || !IsUsablePlanPoint(box.Max))
             {
                 return corners;
             }
 
             double z = (box.Min.Z + box.Max.Z) * 0.5;
-            corners.Add(new XYZ(box.Min.X, box.Min.Y, z));
-            corners.Add(new XYZ(box.Min.X, box.Max.Y, z));
-            corners.Add(new XYZ(box.Max.X, box.Max.Y, z));
-            corners.Add(new XYZ(box.Max.X, box.Min.Y, z));
+            AddUniquePointXY(corners, new XYZ(box.Min.X, box.Min.Y, z));
+            AddUniquePointXY(corners, new XYZ(box.Min.X, box.Max.Y, z));
+            AddUniquePointXY(corners, new XYZ(box.Max.X, box.Max.Y, z));
+            AddUniquePointXY(corners, new XYZ(box.Max.X, box.Min.Y, z));
             return corners;
         }
 
@@ -2422,9 +4583,53 @@ namespace CadToRevit.Services.Rooms
             return (a.X - origin.X) * (b.Y - origin.Y) - (a.Y - origin.Y) * (b.X - origin.X);
         }
 
+        private static bool IsUsablePlanPoint(XYZ point)
+        {
+            if (point == null ||
+                double.IsNaN(point.X) || double.IsInfinity(point.X) ||
+                double.IsNaN(point.Y) || double.IsInfinity(point.Y) ||
+                double.IsNaN(point.Z) || double.IsInfinity(point.Z))
+            {
+                return false;
+            }
+
+            // Normal Revit project coordinates are many orders of magnitude below
+            // this limit.  The guard intentionally only rejects impossible/sentinel
+            // geometry while remaining safe for large shared-coordinate projects.
+            const double maxAbsoluteCoordinateFeet = 10000000.0;
+            return Math.Abs(point.X) <= maxAbsoluteCoordinateFeet &&
+                   Math.Abs(point.Y) <= maxAbsoluteCoordinateFeet &&
+                   Math.Abs(point.Z) <= maxAbsoluteCoordinateFeet;
+        }
+
+        private static bool IsReasonablePlacementDistance(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < -1e-8)
+            {
+                return false;
+            }
+
+            // One kilometre is deliberately far beyond any AHU room-placement
+            // distance, while still preventing sentinel geometry from becoming a
+            // gigantic MoveElement translation.
+            double maxDistance = UnitUtils.ConvertToInternalUnits(1000000.0, UnitTypeId.Millimeters);
+            return value <= maxDistance;
+        }
+
+        private static bool IsReasonablePlacementSignedDistance(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value))
+            {
+                return false;
+            }
+
+            double maxDistance = UnitUtils.ConvertToInternalUnits(1000000.0, UnitTypeId.Millimeters);
+            return Math.Abs(value) <= maxDistance;
+        }
+
         private static void AddUniquePointXY(List<XYZ> points, XYZ point)
         {
-            if (points == null || point == null)
+            if (points == null || !IsUsablePlanPoint(point))
             {
                 return;
             }
@@ -4659,6 +6864,15 @@ namespace CadToRevit.Services.Rooms
                    point.Z.ToString("F3", CultureInfo.InvariantCulture);
         }
 
+        private sealed class AhuConfiguredModuleCenter
+        {
+            public string ModuleCode { get; set; }
+            public string Name { get; set; }
+            public int GridRow { get; set; }
+            public int GridColumn { get; set; }
+            public XYZ Center { get; set; }
+        }
+
         private sealed class AhuCoreBounds
         {
             private readonly List<string> _names = new List<string>();
@@ -4859,6 +7073,88 @@ namespace CadToRevit.Services.Rooms
             public double DistanceToPlacement { get; set; } = double.MaxValue;
         }
 
+
+        internal sealed class PlacementAnalysisGeometry
+        {
+            public List<XYZ> CoreHull { get; set; } = new List<XYZ>();
+            public XYZ LocalRight { get; set; }
+            public XYZ LocalBottom { get; set; }
+            public string Mode { get; set; }
+        }
+
+        /// <summary>
+        /// Read-only bridge for post-placement spatial reporting.
+        /// It reuses the same physical-core filtering and configured AHU-local axes
+        /// already used by the local placement solver. No move/rotate/delete operation
+        /// is performed here, so placement behaviour remains unchanged.
+        /// </summary>
+        internal static bool TryGetPlacedAhuAnalysisGeometry(
+            Document doc,
+            ElementId instanceId,
+            string familyKey,
+            out PlacementAnalysisGeometry geometry,
+            out string error)
+        {
+            geometry = null;
+            error = string.Empty;
+
+            if (doc == null ||
+                instanceId == null ||
+                instanceId == ElementId.InvalidElementId)
+            {
+                error = "Placed AHU instance is unavailable.";
+                return false;
+            }
+
+            FamilyInstance instance = doc.GetElement(instanceId) as FamilyInstance;
+            if (instance == null)
+            {
+                error = "Placed AHU family instance was not found.";
+                return false;
+            }
+
+            if (!TryResolveConfiguredAhuLocalAxes(
+                    doc,
+                    instance,
+                    familyKey,
+                    out XYZ localRight,
+                    out XYZ localBottom,
+                    out string localAxisMode))
+            {
+                error = "AHU local axes could not be resolved.";
+                return false;
+            }
+
+            List<XYZ> corePoints = CollectEquipmentCorePlanPoints(
+                doc,
+                instance,
+                out string corePointMode);
+            List<XYZ> coreHull = ComputeConvexHullXY(corePoints);
+            if (coreHull == null || coreHull.Count < 3)
+            {
+                error = "AHU physical body footprint could not be resolved.";
+                return false;
+            }
+
+            List<XYZ> validHull = coreHull
+                .Where(x => x != null && IsUsablePlanPoint(x))
+                .ToList();
+            if (validHull.Count < 3)
+            {
+                error = "AHU physical body footprint contains no usable plan points.";
+                return false;
+            }
+
+            geometry = new PlacementAnalysisGeometry
+            {
+                CoreHull = validHull,
+                LocalRight = localRight.Normalize(),
+                LocalBottom = localBottom.Normalize(),
+                Mode = (localAxisMode ?? string.Empty) + "/" + (corePointMode ?? string.Empty)
+            };
+            return true;
+        }
+
         private static void ApplyMetadata(FamilyInstance instance, string roomKey, string familyKey)
         {
             if (instance == null)
@@ -4924,6 +7220,1130 @@ namespace CadToRevit.Services.Rooms
             }
 
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Post-placement spatial violation analyzer for regular four-sided rooms.
+    ///
+    /// Scope intentionally kept separate from the AHU placement solver:
+    ///   - does NOT change AHU X/Y/rotation;
+    ///   - does NOT delete the AHU;
+    ///   - checks the already placed AHU physical body plus configured
+    ///     Maintenance Clearance depths against the room clear rectangle;
+    ///   - checks the same required-clearance envelope against every existing
+    ///     Restricted Area and reports approximate overlap area.
+    ///
+    /// The analyzer projects both room boundary and AHU footprint onto the AHU's
+    /// configured local Right/Bottom axes. This keeps the calculation valid for a
+    /// regular rectangular room even when the room itself is rotated in plan.
+    /// </summary>
+    internal static class AhuPlacementViolationAnalyzerService
+    {
+        private const double MillimetersPerFoot = 304.8;
+        private const double ReportToleranceMm = 1.0;
+        private const double RestrictedOverlapToleranceM2 = 0.0001;
+        private const double SquareMetersPerSquareFoot = 0.09290304;
+        private const double MaxReasonableCoordinateFeet = 1000000.0;
+
+        internal sealed class RestrictedAreaConflict
+        {
+            public string ObstacleId { get; set; }
+            public string Name { get; set; }
+            public int ElementIdValue { get; set; }
+            public double OverlapAreaM2 { get; set; }
+        }
+
+        internal sealed class AnalysisResult
+        {
+            public bool Evaluated { get; set; }
+            public string Error { get; set; }
+
+            public bool IsPhysicalDimensionOversized { get; set; }
+            public bool HasCurrentBoundaryOverrun { get; set; }
+            public List<RestrictedAreaConflict> RestrictedAreaConflicts { get; } =
+                new List<RestrictedAreaConflict>();
+
+            public bool HasRestrictedAreaViolation
+            {
+                get
+                {
+                    return RestrictedAreaConflicts.Any(
+                        x => x != null && x.OverlapAreaM2 > RestrictedOverlapToleranceM2);
+                }
+            }
+
+            public bool HasMultipleSpatialViolations
+            {
+                get
+                {
+                    return IsPhysicalDimensionOversized && HasRestrictedAreaViolation;
+                }
+            }
+
+            public bool HasAnyViolation
+            {
+                get
+                {
+                    return IsPhysicalDimensionOversized || HasRestrictedAreaViolation;
+                }
+            }
+
+            public double TotalRestrictedOverlapAreaM2
+            {
+                get
+                {
+                    return RestrictedAreaConflicts
+                        .Where(x => x != null)
+                        .Sum(x => Math.Max(0.0, x.OverlapAreaM2));
+                }
+            }
+
+            public double PhysicalBodyLengthMm { get; set; }
+            public double PhysicalBodyWidthMm { get; set; }
+            public double RequiredLengthMm { get; set; }
+            public double RequiredWidthMm { get; set; }
+            public double AvailableLengthMm { get; set; }
+            public double AvailableWidthMm { get; set; }
+            public double LengthExceedsMm { get; set; }
+            public double WidthExceedsMm { get; set; }
+
+            public double LeftExceedsMm { get; set; }
+            public double RightExceedsMm { get; set; }
+            public double TopExceedsMm { get; set; }
+            public double BottomExceedsMm { get; set; }
+
+            public double MaintenanceTopMm { get; set; }
+            public double MaintenanceBottomMm { get; set; }
+            public double MaintenanceLeftMm { get; set; }
+            public double MaintenanceRightMm { get; set; }
+
+            public string StatusCode
+            {
+                get
+                {
+                    if (HasMultipleSpatialViolations)
+                    {
+                        return "MultipleSpatialViolations";
+                    }
+
+                    if (HasRestrictedAreaViolation)
+                    {
+                        return "RestrictedAreaViolation";
+                    }
+
+                    if (IsPhysicalDimensionOversized)
+                    {
+                        return "PhysicalDimensionOversized";
+                    }
+
+                    return string.Empty;
+                }
+            }
+
+            public string StatusTitle
+            {
+                get
+                {
+                    if (HasMultipleSpatialViolations)
+                    {
+                        return "Multiple Spatial Violations";
+                    }
+
+                    if (HasRestrictedAreaViolation)
+                    {
+                        return "Restricted Area Violation";
+                    }
+
+                    if (IsPhysicalDimensionOversized)
+                    {
+                        return "Physical Dimension Oversized";
+                    }
+
+                    return string.Empty;
+                }
+            }
+
+            public string BuildWarningMessage()
+            {
+                if (HasMultipleSpatialViolations)
+                {
+                    return BuildMultipleViolationMessage();
+                }
+
+                if (HasRestrictedAreaViolation)
+                {
+                    return BuildRestrictedAreaMessage();
+                }
+
+                if (IsPhysicalDimensionOversized)
+                {
+                    return BuildPhysicalDimensionMessage();
+                }
+
+                return string.Empty;
+            }
+
+            private string BuildPhysicalDimensionMessage()
+            {
+                // UI text is intentionally limited to the customer-approved content.
+                // Detailed geometry, room-clearance and side-overrun diagnostics remain
+                // available in [AhuPlacementViolation] logs below.
+                return
+                    "The physical footprint of the equipment exceeds the maximum clear dimensions of the target room. " +
+                    "Please select a more compact equipment or modify the room dimensions in the model." +
+                    Environment.NewLine +
+                    "Length exceeds (mm): " + FormatMm(LengthExceedsMm) +
+                    Environment.NewLine +
+                    "Width exceeds (mm): " + FormatMm(WidthExceedsMm);
+            }
+
+            private string BuildRestrictedAreaMessage()
+            {
+                // Keep the customer-approved wording.  Overlap Area replaces the
+                // original Encroachment depth metric by confirmed requirement.
+                return
+                    "The equipment's bounding box encroaches on a defined Restricted Area within this room. " +
+                    "Please remove or modify the zone in Restricted Area management, or select smaller equipment to avoid this area." +
+                    Environment.NewLine +
+                    BuildRestrictedAreaConflictText();
+            }
+
+            private string BuildMultipleViolationMessage()
+            {
+                return
+                    "The physical footprint of the equipment exceeds the maximum clear dimensions of the target room, " +
+                    "and its bounding box simultaneously encroaches on a defined Restricted Area." +
+                    Environment.NewLine +
+                    "Length exceeds (mm): " + FormatMm(LengthExceedsMm) +
+                    Environment.NewLine +
+                    "Width exceeds (mm): " + FormatMm(WidthExceedsMm) +
+                    Environment.NewLine +
+                    BuildRestrictedAreaConflictText();
+            }
+
+            private string BuildRestrictedAreaConflictText()
+            {
+                List<RestrictedAreaConflict> conflicts = RestrictedAreaConflicts
+                    .Where(x => x != null && x.OverlapAreaM2 > RestrictedOverlapToleranceM2)
+                    .OrderByDescending(x => x.OverlapAreaM2)
+                    .ToList();
+
+                if (conflicts.Count == 0)
+                {
+                    return string.Empty;
+                }
+
+                List<string> lines = new List<string>();
+                foreach (RestrictedAreaConflict conflict in conflicts)
+                {
+                    lines.Add(
+                        "Conflicting Zone: " +
+                        (string.IsNullOrWhiteSpace(conflict.Name)
+                            ? "Restricted Area"
+                            : conflict.Name));
+                    lines.Add(
+                        "Overlap Area (m²): " +
+                        FormatAreaM2(conflict.OverlapAreaM2));
+                }
+
+                // Keep the UI output strictly to the customer-required fields.
+                // The aggregate overlap area is still retained in diagnostics via
+                // TotalRestrictedOverlapAreaM2 and [AhuPlacementViolation] logging.
+                return string.Join(Environment.NewLine, lines);
+            }
+        }
+
+        internal static AnalysisResult Analyze(
+            Document doc,
+            RoomSemanticRecord room,
+            RoomCustomFamilyOption option,
+            ElementId placedInstanceId)
+        {
+            AnalysisResult result = new AnalysisResult();
+
+            if (doc == null || room == null || option == null)
+            {
+                result.Error = "Required placement analysis input is missing.";
+                Log(result, room, option, placedInstanceId, "InputMissing");
+                return result;
+            }
+
+            if (!RoomCustomFamilyPlacementService.TryGetPlacedAhuAnalysisGeometry(
+                    doc,
+                    placedInstanceId,
+                    option.Key,
+                    out RoomCustomFamilyPlacementService.PlacementAnalysisGeometry geometry,
+                    out string geometryError))
+            {
+                result.Error = geometryError ?? "AHU physical geometry could not be resolved.";
+                Log(result, room, option, placedInstanceId, "GeometryUnavailable");
+                return result;
+            }
+
+            List<XYZ> roomPoints = ResolveRoomPlanPoints(room);
+            if (roomPoints.Count < 4)
+            {
+                result.Error = "Regular room boundary points are unavailable.";
+                Log(result, room, option, placedInstanceId, "RoomBoundaryUnavailable");
+                return result;
+            }
+
+            XYZ localRight = FlattenAndNormalize(geometry.LocalRight);
+            XYZ localBottom = FlattenAndNormalize(geometry.LocalBottom);
+            if (localRight == null || localBottom == null)
+            {
+                result.Error = "AHU local analysis axes are unavailable.";
+                Log(result, room, option, placedInstanceId, "AxisUnavailable");
+                return result;
+            }
+
+            if (!TryProject(roomPoints, localRight, out double roomRightMin, out double roomRightMax) ||
+                !TryProject(roomPoints, localBottom, out double roomBottomMin, out double roomBottomMax) ||
+                !TryProject(geometry.CoreHull, localRight, out double coreRightMin, out double coreRightMax) ||
+                !TryProject(geometry.CoreHull, localBottom, out double coreBottomMin, out double coreBottomMax))
+            {
+                result.Error = "Room/AHU projection could not be resolved.";
+                Log(result, room, option, placedInstanceId, "ProjectionFailed");
+                return result;
+            }
+
+            IReadOnlyList<RoomCustomFamilyMaintenanceSpaceDto> maintenanceRows =
+                RoomCustomFamilyCatalogService.GetMaintenanceSpaces(option.Key);
+
+            double topMm = ResolveMaintenanceDepth(maintenanceRows, "Top");
+            double bottomMm = ResolveMaintenanceDepth(maintenanceRows, "Bottom");
+            double leftMm = ResolveMaintenanceDepth(maintenanceRows, "Left");
+            double rightMm = ResolveMaintenanceDepth(maintenanceRows, "Right");
+
+            result.MaintenanceTopMm = topMm;
+            result.MaintenanceBottomMm = bottomMm;
+            result.MaintenanceLeftMm = leftMm;
+            result.MaintenanceRightMm = rightMm;
+
+            double coreRightMm = Math.Max(0.0, (coreRightMax - coreRightMin) * MillimetersPerFoot);
+            double coreBottomMm = Math.Max(0.0, (coreBottomMax - coreBottomMin) * MillimetersPerFoot);
+            double roomRightMm = Math.Max(0.0, (roomRightMax - roomRightMin) * MillimetersPerFoot);
+            double roomBottomMm = Math.Max(0.0, (roomBottomMax - roomBottomMin) * MillimetersPerFoot);
+
+            double requiredRightMm = coreRightMm + leftMm + rightMm;
+            double requiredBottomMm = coreBottomMm + topMm + bottomMm;
+
+            // "Length" and "Width" stay tied to the AHU physical body rather than
+            // world X/Y. The longer physical-body axis is reported as Length.
+            bool rightAxisIsLength = coreRightMm >= coreBottomMm;
+            result.PhysicalBodyLengthMm = rightAxisIsLength ? coreRightMm : coreBottomMm;
+            result.PhysicalBodyWidthMm = rightAxisIsLength ? coreBottomMm : coreRightMm;
+            result.RequiredLengthMm = rightAxisIsLength ? requiredRightMm : requiredBottomMm;
+            result.RequiredWidthMm = rightAxisIsLength ? requiredBottomMm : requiredRightMm;
+            result.AvailableLengthMm = rightAxisIsLength ? roomRightMm : roomBottomMm;
+            result.AvailableWidthMm = rightAxisIsLength ? roomBottomMm : roomRightMm;
+
+            result.LengthExceedsMm = Math.Max(0.0, result.RequiredLengthMm - result.AvailableLengthMm);
+            result.WidthExceedsMm = Math.Max(0.0, result.RequiredWidthMm - result.AvailableWidthMm);
+
+            double leftFeet = leftMm / MillimetersPerFoot;
+            double rightFeet = rightMm / MillimetersPerFoot;
+            double topFeet = topMm / MillimetersPerFoot;
+            double bottomFeet = bottomMm / MillimetersPerFoot;
+
+            // Along LocalRight: Left is the minimum side, Right is the maximum side.
+            double envelopeRightMin = coreRightMin - leftFeet;
+            double envelopeRightMax = coreRightMax + rightFeet;
+
+            // Along LocalBottom: Top is the minimum side, Bottom is the maximum side.
+            double envelopeBottomMin = coreBottomMin - topFeet;
+            double envelopeBottomMax = coreBottomMax + bottomFeet;
+
+            result.LeftExceedsMm =
+                Math.Max(0.0, (roomRightMin - envelopeRightMin) * MillimetersPerFoot);
+            result.RightExceedsMm =
+                Math.Max(0.0, (envelopeRightMax - roomRightMax) * MillimetersPerFoot);
+            result.TopExceedsMm =
+                Math.Max(0.0, (roomBottomMin - envelopeBottomMin) * MillimetersPerFoot);
+            result.BottomExceedsMm =
+                Math.Max(0.0, (envelopeBottomMax - roomBottomMax) * MillimetersPerFoot);
+
+            result.IsPhysicalDimensionOversized =
+                result.LengthExceedsMm > ReportToleranceMm ||
+                result.WidthExceedsMm > ReportToleranceMm;
+
+            result.HasCurrentBoundaryOverrun =
+                result.LeftExceedsMm > ReportToleranceMm ||
+                result.RightExceedsMm > ReportToleranceMm ||
+                result.TopExceedsMm > ReportToleranceMm ||
+                result.BottomExceedsMm > ReportToleranceMm;
+
+            // Phase-2: Restricted Area analysis. This is deliberately post-placement
+            // reporting only: no AHU move/rotation is performed here. The tested shape
+            // is the same required-clearance envelope used by the physical-dimension
+            // report (real AHU physical body + M1/M2/M3/M4 Maintenance Clearance).
+            AnalyzeRestrictedAreaOverlaps(
+                doc,
+                placedInstanceId,
+                localRight,
+                localBottom,
+                envelopeRightMin,
+                envelopeRightMax,
+                envelopeBottomMin,
+                envelopeBottomMax,
+                result);
+
+            result.Evaluated = true;
+            Log(result, room, option, placedInstanceId, geometry.Mode ?? string.Empty);
+            return result;
+        }
+
+        private static void AnalyzeRestrictedAreaOverlaps(
+            Document doc,
+            ElementId placedInstanceId,
+            XYZ localRight,
+            XYZ localBottom,
+            double envelopeRightMin,
+            double envelopeRightMax,
+            double envelopeBottomMin,
+            double envelopeBottomMax,
+            AnalysisResult result)
+        {
+            if (doc == null ||
+                result == null ||
+                localRight == null ||
+                localBottom == null)
+            {
+                return;
+            }
+
+            IList<CadToRevit.Models.PathObstacleRecord> records;
+            try
+            {
+                records = CadToRevit.Services.PathObstacles.PathObstacleStoreService.Load(doc);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticRecorder.AppendDebug(
+                    "[AhuPlacementViolation.Restricted] Restricted-area load skipped: " +
+                    ex.Message);
+                return;
+            }
+
+            if (records == null || records.Count == 0)
+            {
+                return;
+            }
+
+            string placedLevelName = ResolveElementLevelName(doc, placedInstanceId);
+
+            List<XYZ> envelopeCorners = BuildEnvelopeCorners(
+                localRight,
+                localBottom,
+                envelopeRightMin,
+                envelopeRightMax,
+                envelopeBottomMin,
+                envelopeBottomMax,
+                0.0);
+
+            if (envelopeCorners.Count != 4)
+            {
+                return;
+            }
+
+            double envelopeMinX = envelopeCorners.Min(x => x.X);
+            double envelopeMaxX = envelopeCorners.Max(x => x.X);
+            double envelopeMinY = envelopeCorners.Min(x => x.Y);
+            double envelopeMaxY = envelopeCorners.Max(x => x.Y);
+
+            foreach (CadToRevit.Models.PathObstacleRecord record in records)
+            {
+                if (record == null)
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(placedLevelName) &&
+                    !string.IsNullOrWhiteSpace(record.LevelName) &&
+                    !string.Equals(
+                        placedLevelName.Trim(),
+                        record.LevelName.Trim(),
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                Element obstacle =
+                    CadToRevit.Services.PathObstacles.PathObstacleStoreService.FindElement(
+                        doc,
+                        record);
+
+                if (obstacle == null)
+                {
+                    continue;
+                }
+
+                BoundingBoxXYZ obstacleBox = null;
+                try
+                {
+                    obstacleBox = obstacle.get_BoundingBox(null);
+                }
+                catch
+                {
+                    obstacleBox = null;
+                }
+
+                if (obstacleBox == null ||
+                    obstacleBox.Min == null ||
+                    obstacleBox.Max == null)
+                {
+                    continue;
+                }
+
+                const double PlanToleranceFeet = 1.0 / 304.8;
+                if (obstacleBox.Max.X < envelopeMinX - PlanToleranceFeet ||
+                    obstacleBox.Min.X > envelopeMaxX + PlanToleranceFeet ||
+                    obstacleBox.Max.Y < envelopeMinY - PlanToleranceFeet ||
+                    obstacleBox.Min.Y > envelopeMaxY + PlanToleranceFeet)
+                {
+                    continue;
+                }
+
+                double overlapAreaM2 = CalculateRestrictedOverlapAreaM2(
+                    obstacle,
+                    localRight,
+                    localBottom,
+                    envelopeRightMin,
+                    envelopeRightMax,
+                    envelopeBottomMin,
+                    envelopeBottomMax,
+                    obstacleBox);
+
+                if (overlapAreaM2 <= RestrictedOverlapToleranceM2)
+                {
+                    continue;
+                }
+
+                result.RestrictedAreaConflicts.Add(
+                    new RestrictedAreaConflict
+                    {
+                        ObstacleId = record.ObstacleId ?? string.Empty,
+                        Name = string.IsNullOrWhiteSpace(record.Name)
+                            ? "Restricted Area"
+                            : record.Name.Trim(),
+                        ElementIdValue = obstacle.Id.IntegerValue,
+                        OverlapAreaM2 = overlapAreaM2
+                    });
+            }
+        }
+
+        private static double CalculateRestrictedOverlapAreaM2(
+            Element obstacle,
+            XYZ localRight,
+            XYZ localBottom,
+            double envelopeRightMin,
+            double envelopeRightMax,
+            double envelopeBottomMin,
+            double envelopeBottomMax,
+            BoundingBoxXYZ obstacleBox)
+        {
+            if (obstacle == null || obstacleBox == null)
+            {
+                return 0.0;
+            }
+
+            double minZ = obstacleBox.Min != null ? obstacleBox.Min.Z : 0.0;
+            double maxZ = obstacleBox.Max != null ? obstacleBox.Max.Z : minZ;
+            double paddingFeet = 1.0 / 304.8;
+            double baseZ = minZ - paddingFeet;
+            double height = Math.Max(
+                2.0 * paddingFeet,
+                (maxZ - minZ) + (2.0 * paddingFeet));
+
+            Solid clearanceSolid = CreateClearanceEnvelopeSolid(
+                localRight,
+                localBottom,
+                envelopeRightMin,
+                envelopeRightMax,
+                envelopeBottomMin,
+                envelopeBottomMax,
+                baseZ,
+                height);
+
+            if (clearanceSolid == null)
+            {
+                return 0.0;
+            }
+
+            double totalAreaSquareFeet = 0.0;
+
+            foreach (Solid obstacleSolid in CollectElementSolids(obstacle))
+            {
+                if (obstacleSolid == null ||
+                    obstacleSolid.Faces == null ||
+                    obstacleSolid.Faces.Size == 0)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    Solid intersection =
+                        BooleanOperationsUtils.ExecuteBooleanOperation(
+                            clearanceSolid,
+                            obstacleSolid,
+                            BooleanOperationsType.Intersect);
+
+                    if (intersection == null ||
+                        intersection.Faces == null ||
+                        intersection.Faces.Size == 0)
+                    {
+                        continue;
+                    }
+
+                    double horizontalTopArea = 0.0;
+                    foreach (Face face in intersection.Faces)
+                    {
+                        PlanarFace planarFace = face as PlanarFace;
+                        if (planarFace == null ||
+                            planarFace.FaceNormal == null ||
+                            planarFace.FaceNormal.Z < 0.99)
+                        {
+                            continue;
+                        }
+
+                        if (IsFinite(planarFace.Area) && planarFace.Area > 0.0)
+                        {
+                            horizontalTopArea += planarFace.Area;
+                        }
+                    }
+
+                    if (horizontalTopArea > 0.0)
+                    {
+                        totalAreaSquareFeet += horizontalTopArea;
+                        continue;
+                    }
+
+                    // Safe fallback for the Restricted Area solids created by this
+                    // add-in: they are vertical extrusions, so volume / height gives
+                    // their plan overlap area.
+                    double intersectionHeight = ResolveSolidHeight(intersection);
+                    if (intersectionHeight > 1e-9 &&
+                        IsFinite(intersection.Volume) &&
+                        intersection.Volume > 0.0)
+                    {
+                        totalAreaSquareFeet += intersection.Volume / intersectionHeight;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    DiagnosticRecorder.AppendDebug(
+                        "[AhuPlacementViolation.Restricted] Boolean intersection skipped. ElementId=" +
+                        obstacle.Id.IntegerValue.ToString(CultureInfo.InvariantCulture) +
+                        ", Error=" + ex.Message);
+                }
+            }
+
+            if (!IsFinite(totalAreaSquareFeet) || totalAreaSquareFeet <= 0.0)
+            {
+                return 0.0;
+            }
+
+            return totalAreaSquareFeet * SquareMetersPerSquareFoot;
+        }
+
+        private static Solid CreateClearanceEnvelopeSolid(
+            XYZ localRight,
+            XYZ localBottom,
+            double rightMin,
+            double rightMax,
+            double bottomMin,
+            double bottomMax,
+            double baseZ,
+            double height)
+        {
+            List<XYZ> corners = BuildEnvelopeCorners(
+                localRight,
+                localBottom,
+                rightMin,
+                rightMax,
+                bottomMin,
+                bottomMax,
+                baseZ);
+
+            if (corners.Count != 4 || height <= 1e-9)
+            {
+                return null;
+            }
+
+            try
+            {
+                CurveLoop loop = new CurveLoop();
+                for (int i = 0; i < corners.Count; i++)
+                {
+                    XYZ start = corners[i];
+                    XYZ end = corners[(i + 1) % corners.Count];
+                    if (start == null ||
+                        end == null ||
+                        start.DistanceTo(end) < 1e-9)
+                    {
+                        return null;
+                    }
+
+                    loop.Append(Line.CreateBound(start, end));
+                }
+
+                return GeometryCreationUtilities.CreateExtrusionGeometry(
+                    new List<CurveLoop> { loop },
+                    XYZ.BasisZ,
+                    height);
+            }
+            catch (Exception ex)
+            {
+                DiagnosticRecorder.AppendDebug(
+                    "[AhuPlacementViolation.Restricted] Clearance envelope solid could not be created: " +
+                    ex.Message);
+                return null;
+            }
+        }
+
+        private static List<XYZ> BuildEnvelopeCorners(
+            XYZ localRight,
+            XYZ localBottom,
+            double rightMin,
+            double rightMax,
+            double bottomMin,
+            double bottomMax,
+            double z)
+        {
+            List<XYZ> corners = new List<XYZ>();
+
+            XYZ p1 = TryResolvePlanPointFromAxisCoordinates(
+                localRight, localBottom, rightMin, bottomMin, z);
+            XYZ p2 = TryResolvePlanPointFromAxisCoordinates(
+                localRight, localBottom, rightMax, bottomMin, z);
+            XYZ p3 = TryResolvePlanPointFromAxisCoordinates(
+                localRight, localBottom, rightMax, bottomMax, z);
+            XYZ p4 = TryResolvePlanPointFromAxisCoordinates(
+                localRight, localBottom, rightMin, bottomMax, z);
+
+            if (p1 != null && p2 != null && p3 != null && p4 != null)
+            {
+                corners.Add(p1);
+                corners.Add(p2);
+                corners.Add(p3);
+                corners.Add(p4);
+            }
+
+            return corners;
+        }
+
+        private static XYZ TryResolvePlanPointFromAxisCoordinates(
+            XYZ localRight,
+            XYZ localBottom,
+            double rightCoordinate,
+            double bottomCoordinate,
+            double z)
+        {
+            if (localRight == null || localBottom == null)
+            {
+                return null;
+            }
+
+            // rightCoordinate = dot(P, localRight)
+            // bottomCoordinate = dot(P, localBottom)
+            // Solve the 2x2 system rather than assuming the axes are perfectly
+            // orthogonal; this protects rotated family/room cases from drift.
+            double determinant =
+                (localRight.X * localBottom.Y) -
+                (localRight.Y * localBottom.X);
+
+            if (!IsFinite(determinant) || Math.Abs(determinant) < 1e-9)
+            {
+                return null;
+            }
+
+            double x =
+                ((rightCoordinate * localBottom.Y) -
+                 (localRight.Y * bottomCoordinate)) /
+                determinant;
+
+            double y =
+                ((localRight.X * bottomCoordinate) -
+                 (rightCoordinate * localBottom.X)) /
+                determinant;
+
+            if (!IsFinite(x) || !IsFinite(y))
+            {
+                return null;
+            }
+
+            return new XYZ(x, y, z);
+        }
+
+        private static IEnumerable<Solid> CollectElementSolids(Element element)
+        {
+            if (element == null)
+            {
+                yield break;
+            }
+
+            GeometryElement geometry = null;
+            try
+            {
+                Options options = new Options
+                {
+                    ComputeReferences = false,
+                    IncludeNonVisibleObjects = true,
+                    DetailLevel = ViewDetailLevel.Fine
+                };
+                geometry = element.get_Geometry(options);
+            }
+            catch
+            {
+                geometry = null;
+            }
+
+            if (geometry == null)
+            {
+                yield break;
+            }
+
+            foreach (Solid solid in CollectSolidsRecursive(geometry))
+            {
+                yield return solid;
+            }
+        }
+
+        private static IEnumerable<Solid> CollectSolidsRecursive(GeometryElement geometry)
+        {
+            if (geometry == null)
+            {
+                yield break;
+            }
+
+            foreach (GeometryObject geometryObject in geometry)
+            {
+                Solid solid = geometryObject as Solid;
+                if (solid != null)
+                {
+                    if (solid.Faces != null && solid.Faces.Size > 0)
+                    {
+                        yield return solid;
+                    }
+
+                    continue;
+                }
+
+                GeometryInstance instance = geometryObject as GeometryInstance;
+                if (instance == null)
+                {
+                    continue;
+                }
+
+                GeometryElement instanceGeometry = null;
+                try
+                {
+                    instanceGeometry = instance.GetInstanceGeometry();
+                }
+                catch
+                {
+                    instanceGeometry = null;
+                }
+
+                if (instanceGeometry == null)
+                {
+                    continue;
+                }
+
+                foreach (Solid nested in CollectSolidsRecursive(instanceGeometry))
+                {
+                    yield return nested;
+                }
+            }
+        }
+
+        private static double ResolveSolidHeight(Solid solid)
+        {
+            if (solid == null || solid.Faces == null || solid.Faces.Size == 0)
+            {
+                return 0.0;
+            }
+
+            double minZ = double.MaxValue;
+            double maxZ = double.MinValue;
+
+            foreach (Edge edge in solid.Edges)
+            {
+                if (edge == null)
+                {
+                    continue;
+                }
+
+                Curve curve = null;
+                try
+                {
+                    curve = edge.AsCurve();
+                }
+                catch
+                {
+                    curve = null;
+                }
+
+                if (curve == null)
+                {
+                    continue;
+                }
+
+                XYZ a = curve.GetEndPoint(0);
+                XYZ b = curve.GetEndPoint(1);
+
+                if (a != null && IsFinite(a.Z))
+                {
+                    minZ = Math.Min(minZ, a.Z);
+                    maxZ = Math.Max(maxZ, a.Z);
+                }
+
+                if (b != null && IsFinite(b.Z))
+                {
+                    minZ = Math.Min(minZ, b.Z);
+                    maxZ = Math.Max(maxZ, b.Z);
+                }
+            }
+
+            if (minZ == double.MaxValue || maxZ == double.MinValue)
+            {
+                return 0.0;
+            }
+
+            return Math.Max(0.0, maxZ - minZ);
+        }
+
+        private static string ResolveElementLevelName(Document doc, ElementId elementId)
+        {
+            if (doc == null ||
+                elementId == null ||
+                elementId == ElementId.InvalidElementId)
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                Element element = doc.GetElement(elementId);
+                if (element == null ||
+                    element.LevelId == null ||
+                    element.LevelId == ElementId.InvalidElementId)
+                {
+                    return string.Empty;
+                }
+
+                Element level = doc.GetElement(element.LevelId);
+                return level != null ? level.Name ?? string.Empty : string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private static List<XYZ> ResolveRoomPlanPoints(RoomSemanticRecord room)
+        {
+            List<XYZ> points = (room != null && room.LoopPoints != null
+                    ? room.LoopPoints
+                    : new List<XYZ>())
+                .Where(IsUsablePlanPoint)
+                .Select(x => new XYZ(x.X, x.Y, 0.0))
+                .ToList();
+
+            if (points.Count >= 4)
+            {
+                return points;
+            }
+
+            BoundingBoxXYZ box = room != null ? room.BBox : null;
+            if (box == null || box.Min == null || box.Max == null)
+            {
+                return points;
+            }
+
+            XYZ[] fallback =
+            {
+                new XYZ(box.Min.X, box.Min.Y, 0.0),
+                new XYZ(box.Max.X, box.Min.Y, 0.0),
+                new XYZ(box.Max.X, box.Max.Y, 0.0),
+                new XYZ(box.Min.X, box.Max.Y, 0.0)
+            };
+            return fallback.Where(IsUsablePlanPoint).ToList();
+        }
+
+        private static double ResolveMaintenanceDepth(
+            IReadOnlyList<RoomCustomFamilyMaintenanceSpaceDto> rows,
+            string side)
+        {
+            return (rows ?? Array.Empty<RoomCustomFamilyMaintenanceSpaceDto>())
+                .Where(x =>
+                    x != null &&
+                    string.Equals(x.Side, side, StringComparison.OrdinalIgnoreCase))
+                .Select(x => Math.Max(0.0, (double)x.DimensionMm))
+                .DefaultIfEmpty(0.0)
+                .Max();
+        }
+
+        private static bool TryProject(
+            IEnumerable<XYZ> points,
+            XYZ axis,
+            out double min,
+            out double max)
+        {
+            min = double.MaxValue;
+            max = double.MinValue;
+
+            XYZ normalized = FlattenAndNormalize(axis);
+            if (normalized == null)
+            {
+                return false;
+            }
+
+            int count = 0;
+            foreach (XYZ point in points ?? Enumerable.Empty<XYZ>())
+            {
+                if (!IsUsablePlanPoint(point))
+                {
+                    continue;
+                }
+
+                double value = point.X * normalized.X + point.Y * normalized.Y;
+                if (double.IsNaN(value) || double.IsInfinity(value))
+                {
+                    continue;
+                }
+
+                min = Math.Min(min, value);
+                max = Math.Max(max, value);
+                count++;
+            }
+
+            return count >= 2 &&
+                   min != double.MaxValue &&
+                   max != double.MinValue &&
+                   max >= min;
+        }
+
+        private static XYZ FlattenAndNormalize(XYZ vector)
+        {
+            if (vector == null)
+            {
+                return null;
+            }
+
+            XYZ flat = new XYZ(vector.X, vector.Y, 0.0);
+            double length = flat.GetLength();
+            if (double.IsNaN(length) ||
+                double.IsInfinity(length) ||
+                length < 1e-9)
+            {
+                return null;
+            }
+
+            return flat.Normalize();
+        }
+
+        private static bool IsUsablePlanPoint(XYZ point)
+        {
+            if (point == null)
+            {
+                return false;
+            }
+
+            return IsFinite(point.X) &&
+                   IsFinite(point.Y) &&
+                   Math.Abs(point.X) <= MaxReasonableCoordinateFeet &&
+                   Math.Abs(point.Y) <= MaxReasonableCoordinateFeet;
+        }
+
+        private static bool IsFinite(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value);
+        }
+
+        private static string FormatMm(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value))
+            {
+                return "-";
+            }
+
+            return Math.Max(0.0, value).ToString(
+                "0",
+                CultureInfo.InvariantCulture);
+        }
+
+        private static string FormatAreaM2(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value))
+            {
+                return "-";
+            }
+
+            return Math.Max(0.0, value).ToString(
+                "0.###",
+                CultureInfo.InvariantCulture);
+        }
+
+        private static void Log(
+            AnalysisResult result,
+            RoomSemanticRecord room,
+            RoomCustomFamilyOption option,
+            ElementId instanceId,
+            string mode)
+        {
+            if (result == null)
+            {
+                return;
+            }
+
+            DiagnosticRecorder.AppendDebug(
+                "[AhuPlacementViolation] Phase=PhysicalDimension" +
+                ", RoomKey=" + (room != null ? room.Key ?? string.Empty : string.Empty) +
+                ", FamilyKey=" + (option != null ? option.Key ?? string.Empty : string.Empty) +
+                ", ElementId=" +
+                (instanceId != null
+                    ? instanceId.IntegerValue.ToString(CultureInfo.InvariantCulture)
+                    : string.Empty) +
+                ", Evaluated=" + result.Evaluated +
+                ", PhysicalOversized=" + result.IsPhysicalDimensionOversized +
+                ", BodyLmm=" + FormatMm(result.PhysicalBodyLengthMm) +
+                ", BodyWmm=" + FormatMm(result.PhysicalBodyWidthMm) +
+                ", RequiredLmm=" + FormatMm(result.RequiredLengthMm) +
+                ", RequiredWmm=" + FormatMm(result.RequiredWidthMm) +
+                ", AvailableLmm=" + FormatMm(result.AvailableLengthMm) +
+                ", AvailableWmm=" + FormatMm(result.AvailableWidthMm) +
+                ", LengthExceedsMm=" + FormatMm(result.LengthExceedsMm) +
+                ", WidthExceedsMm=" + FormatMm(result.WidthExceedsMm) +
+                ", SideExceedsMm=[L:" + FormatMm(result.LeftExceedsMm) +
+                ",R:" + FormatMm(result.RightExceedsMm) +
+                ",T:" + FormatMm(result.TopExceedsMm) +
+                ",B:" + FormatMm(result.BottomExceedsMm) + "]" +
+                ", MaintenanceMm=[L:" + FormatMm(result.MaintenanceLeftMm) +
+                ",R:" + FormatMm(result.MaintenanceRightMm) +
+                ",T:" + FormatMm(result.MaintenanceTopMm) +
+                ",B:" + FormatMm(result.MaintenanceBottomMm) + "]" +
+                ", RestrictedViolation=" + result.HasRestrictedAreaViolation +
+                ", RestrictedCount=" + result.RestrictedAreaConflicts.Count.ToString(CultureInfo.InvariantCulture) +
+                ", RestrictedOverlapM2=" + FormatAreaM2(result.TotalRestrictedOverlapAreaM2) +
+                ", Status=" + result.StatusCode +
+                ", Mode=" + (mode ?? string.Empty) +
+                ", Error=" + (result.Error ?? string.Empty));
+
+            foreach (RestrictedAreaConflict conflict in result.RestrictedAreaConflicts
+                .Where(x => x != null)
+                .OrderByDescending(x => x.OverlapAreaM2))
+            {
+                DiagnosticRecorder.AppendDebug(
+                    "[AhuPlacementViolation.Restricted] Zone=" +
+                    (conflict.Name ?? string.Empty) +
+                    ", ElementId=" +
+                    conflict.ElementIdValue.ToString(CultureInfo.InvariantCulture) +
+                    ", OverlapAreaM2=" +
+                    FormatAreaM2(conflict.OverlapAreaM2));
+            }
         }
     }
 }
